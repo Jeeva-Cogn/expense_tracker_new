@@ -1,0 +1,41 @@
+name: Deploy Web App
+
+on:
+  push:
+    branches: [ main ]
+  workflow_dispatch:
+
+jobs:
+  build-and-deploy:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Set up Flutter
+        uses: subosito/flutter-action@v2
+        with:
+          channel: stable
+          flutter-version: '3.22.2'
+
+      - name: Install dependencies
+        run: flutter pub get
+
+      - name: Generate Hive type adapters
+        run: dart run build_runner build --delete-conflicting-outputs
+
+      - name: Build web app
+        run: flutter build web --release --web-renderer html --tree-shake-icons
+
+      - name: Deploy to GitHub Pages
+        uses: peaceiris/actions-gh-pages@v3
+        with:
+          github_token: ${{ secrets.GITHUB_TOKEN }}
+          publish_dir: ./build/web
+          cname: your-custom-domain.com  # Optional: Replace with your domain
+
+      - name: Upload build artifacts
+        uses: actions/upload-artifact@v4
+        with:
+          name: web-build
+          path: build/web/
