@@ -26,7 +26,7 @@ class BackupSyncService {
       // Get all data from Hive boxes
       final expenseBox = await Hive.openBox<Expense>('expenses');
       final budgetBox = await Hive.openBox<Budget>('budgets');
-      final goalBox = await Hive.openBox<Goal>('goals');
+      final goalBox = await Hive.openBox<FinancialGoal>('goals');
       final walletBox = await Hive.openBox<Wallet>('wallets');
       final settingsBox = await Hive.openBox<UserSettings>('user_settings');
       final billReminderBox = await Hive.openBox<BillReminder>('bill_reminders');
@@ -43,12 +43,45 @@ class BackupSyncService {
           'total_wallets': walletBox.length,
           'total_reminders': billReminderBox.length,
         },
-        'expenses': expenseBox.values.map((e) => e.toJson()).toList(),
-        'budgets': budgetBox.values.map((b) => b.toJson()).toList(),
-        'goals': goalBox.values.map((g) => g.toJson()).toList(),
-        'wallets': walletBox.values.map((w) => w.toJson()).toList(),
-        'settings': settingsBox.isNotEmpty ? settingsBox.values.first.toJson() : null,
-        'bill_reminders': billReminderBox.values.map((br) => br.toJson()).toList(),
+        'expenses': expenseBox.values.map((e) => {
+          'id': e.id,
+          'title': e.title,
+          'amount': e.amount,
+          'category': e.category,
+          'date': e.date.toIso8601String(),
+          'note': e.note,
+          'type': e.type.toString(),
+        }).toList(),
+        'budgets': budgetBox.values.map((b) => {
+          'id': b.id,
+          'name': b.name,
+          'limit': b.limit,
+          'spent': b.spent,
+          'category': b.category,
+        }).toList(),
+        'goals': goalBox.values.map((g) => {
+          'id': g.id,
+          'name': g.name,
+          'targetAmount': g.targetAmount,
+          'currentAmount': g.currentAmount,
+        }).toList(),
+        'wallets': walletBox.values.map((w) => {
+          'id': w.id,
+          'name': w.name,
+          'balance': w.balance,
+          'currency': w.currency,
+        }).toList(),
+        'settings': settingsBox.isNotEmpty ? {
+          'currency': settingsBox.values.first.currency,
+          'notificationsEnabled': settingsBox.values.first.notificationsEnabled,
+          'favoriteCategories': settingsBox.values.first.favoriteCategories,
+        } : null,
+        'bill_reminders': billReminderBox.values.map((br) => {
+          'id': br.id,
+          'name': br.name,
+          'amount': br.amount,
+          'dueDate': br.dueDate.toIso8601String(),
+        }).toList(),
       };
       
       // Save to temporary directory
@@ -272,7 +305,7 @@ class BackupSyncService {
       // Clear all Hive boxes
       final expenseBox = await Hive.openBox<Expense>('expenses');
       final budgetBox = await Hive.openBox<Budget>('budgets');
-      final goalBox = await Hive.openBox<Goal>('goals');
+      final goalBox = await Hive.openBox<FinancialGoal>('goals');
       final walletBox = await Hive.openBox<Wallet>('wallets');
       final settingsBox = await Hive.openBox<UserSettings>('user_settings');
       final billReminderBox = await Hive.openBox<BillReminder>('bill_reminders');
@@ -298,25 +331,59 @@ class BackupSyncService {
       final expenseBox = await Hive.openBox<Expense>('expenses');
       final expensesData = backupData['expenses'] as List<dynamic>? ?? [];
       for (var expenseJson in expensesData) {
-        final expense = Expense.fromJson(expenseJson as Map<String, dynamic>);
+        final expenseData = expenseJson as Map<String, dynamic>;
+        final expense = Expense(
+          id: expenseData['id'],
+          title: expenseData['title'],
+          amount: expenseData['amount']?.toDouble() ?? 0.0,
+          category: expenseData['category'] ?? 'Other',
+          date: DateTime.parse(expenseData['date']),
+          note: expenseData['note'],
+          createdAt: DateTime.now(),
+          updatedAt: DateTime.now(),
+        );
         await expenseBox.add(expense);
       }
       results['expenses'] = expensesData.length;
       
-      // Restore budgets
+      // Restore budgets  
       final budgetBox = await Hive.openBox<Budget>('budgets');
       final budgetsData = backupData['budgets'] as List<dynamic>? ?? [];
       for (var budgetJson in budgetsData) {
-        final budget = Budget.fromJson(budgetJson as Map<String, dynamic>);
+        final budgetData = budgetJson as Map<String, dynamic>;
+        final budget = Budget(
+          id: budgetData['id'],
+          name: budgetData['name'],
+          limit: budgetData['limit']?.toDouble() ?? 0.0,
+          spent: budgetData['spent']?.toDouble() ?? 0.0,
+          category: budgetData['category'] ?? 'General',
+          period: BudgetPeriod.monthly,
+          startDate: DateTime.now(),
+          endDate: DateTime.now().add(Duration(days: 30)),
+          createdAt: DateTime.now(),
+          updatedAt: DateTime.now(),
+        );
         await budgetBox.add(budget);
       }
       results['budgets'] = budgetsData.length;
       
       // Restore goals
-      final goalBox = await Hive.openBox<Goal>('goals');
+      final goalBox = await Hive.openBox<FinancialGoal>('goals');
       final goalsData = backupData['goals'] as List<dynamic>? ?? [];
       for (var goalJson in goalsData) {
-        final goal = Goal.fromJson(goalJson as Map<String, dynamic>);
+        final goalData = goalJson as Map<String, dynamic>;
+        final goal = FinancialGoal(
+          id: goalData['id'],
+          name: goalData['name'], 
+          description: 'Restored goal',
+          type: GoalType.savings,
+          targetAmount: goalData['targetAmount']?.toDouble() ?? 0.0,
+          currentAmount: goalData['currentAmount']?.toDouble() ?? 0.0,
+          targetDate: DateTime.now().add(Duration(days: 365)),
+          startDate: DateTime.now(),
+          createdAt: DateTime.now(),
+          updatedAt: DateTime.now(),
+        );
         await goalBox.add(goal);
       }
       results['goals'] = goalsData.length;

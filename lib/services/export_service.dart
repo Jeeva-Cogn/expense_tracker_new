@@ -275,7 +275,7 @@ class ExportService {
         cell.value = TextCellValue(headers[i]);
         cell.cellStyle = CellStyle(
           bold: true,
-          backgroundColorHex: '#E3F2FD',
+          backgroundColorHex: ExcelColor.blue,
           horizontalAlign: HorizontalAlign.Center,
         );
       }
@@ -320,7 +320,7 @@ class ExportService {
       totalCell.value = DoubleCellValue(totalAmount);
       totalCell.cellStyle = CellStyle(
         bold: true,
-        backgroundColorHex: '#FFEB3B',
+        backgroundColorHex: ExcelColor.yellow,
         numberFormat: NumFormat.standard_2,
       );
       

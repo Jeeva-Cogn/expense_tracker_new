@@ -1,4 +1,5 @@
 import 'package:hive/hive.dart';
+import 'parsed_transaction.dart';
 
 part 'expense.g.dart';
 
@@ -74,6 +75,22 @@ class Expense extends HiveObject {
     required this.createdAt,
     required this.updatedAt,
   });
+
+  // Factory constructor for ParsedTransaction
+  factory Expense.fromParsedTransaction(ParsedTransaction parsed) {
+    return Expense(
+      id: parsed.id,
+      title: parsed.description,
+      amount: parsed.amount,
+      category: parsed.category,
+      date: parsed.date,
+      note: parsed.rawText,
+      type: parsed.type == 'debit' ? ExpenseType.expense : ExpenseType.income,
+      smsSource: parsed.sender,
+      createdAt: DateTime.now(),
+      updatedAt: DateTime.now(),
+    );
+  }
 
   // Helper methods
   bool get isIncome => type == ExpenseType.income;

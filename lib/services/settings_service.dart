@@ -1,6 +1,7 @@
 import 'package:flutter/foundation.dart';
 import 'package:hive_flutter/hive_flutter.dart';
 import '../models/user_settings.dart';
+import 'biometric_auth_service.dart';
 
 class SettingsService extends ChangeNotifier {
   static const String _boxName = 'user_settings';
@@ -132,6 +133,34 @@ class SettingsService extends ChangeNotifier {
   }
   
   Future<void> toggleBiometric(bool enabled) async {
+    if (enabled) {
+      // Check if biometric authentication is available
+      final biometricService = BiometricAuthService();
+      await biometricService.initialize();
+      
+      if (!await biometricService.isAvailable()) {
+        // Biometric not available, show error and don't enable
+        if (kDebugMode) {
+          print('Biometric authentication not available: ${biometricService.getStatusMessage()}');
+        }
+        throw Exception('Biometric authentication is not available on this device');
+      }
+      
+      // Test biometric authentication before enabling
+      final authenticated = await biometricService.authenticate(
+        reason: 'Please authenticate to enable biometric login',
+        biometricOnly: false,
+        stickyAuth: true,
+      );
+      
+      if (!authenticated) {
+        if (kDebugMode) {
+          print('Biometric authentication failed: ${biometricService.lastError}');
+        }
+        throw Exception('Biometric authentication failed');
+      }
+    }
+    
     _settings!.biometricEnabled = enabled;
     await _saveSettings();
     notifyListeners();

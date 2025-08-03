@@ -1,535 +1,300 @@
-import /// Real SMS Transaction Analyzer with comprehensive bank support
-class RealSMSTransactionAnalyzer {
-  static final Telephony _telephony = Telephony.instance;
-  static final _dateFormat = DateFormat('dd-MMM-yyyy');
-  
-  bool _isInitialized = false;
-  
-  /// Initialize the SMS analyzer with permissions
-  Future<bool> initialize() async {
-    try {
-      // Check if SMS permissions are granted
-      final permissionStatus = await Permission.sms.status;
-      
-      if (permissionStatus != PermissionStatus.granted) {
-        // Request permission
-        final result = await Permission.sms.request();
-        if (result != PermissionStatus.granted) {
-          print('❌ SMS permission denied');
-          return false;
-        }
-      }
-      
-      // Check if telephony is available
-      final hasPermission = await _telephony.requestSmsPermissions;
-      if (hasPermission != true) {
-        print('❌ Telephony permissions not available');
-        return false;
-      }
-      
-      _isInitialized = true;
-      print('✅ Real SMS Transaction Analyzer initialized successfully');
-      return true;
-      
-    } catch (e) {
-      print('❌ Error initializing SMS analyzer: $e');
-      return false;
-    }
-  }t:async';
-import 'package:flutter/material.dart';
+import 'dart:async';
 import 'package:telephony/telephony.dart';
 import 'package:permission_handler/permission_handler.dart';
-import 'package:intl/intl.dart';
-import '../models/expense.dart';
+import 'package:uuid/uuid.dart';
+import '../models/parsed_transaction.dart';
 
-/// Real SMS Transaction Analyzer with comprehensive bank support
+/// Real SMS Transaction Analyzer
+/// Analyzes actual SMS messages from banking services to extract transaction details
 class RealSMSTransactionAnalyzer {
   static final Telephony _telephony = Telephony.instance;
-  static final _dateFormat = DateFormat('dd-MMM-yyyy HH:mm');
+  static final Uuid _uuid = Uuid();
   
-  // Enhanced bank/UPI patterns for transaction detection
-  static final List<String> _transactionKeywords = [
-    'debited', 'credited', 'paid', 'transaction', 'payment',
-    'purchase', 'withdrawal', 'deposit', 'transfer', 'UPI',
-    'NEFT', 'RTGS', 'IMPS', 'EMI', 'bill payment', 'spent',
-    'charged', 'deducted', 'received', 'refund', 'cashback'
-  ];
+  static List<ParsedTransaction> _cachedTransactions = [];
+  static DateTime? _lastAnalysis;
   
-  static final List<String> _bankIdentifiers = [
-    // Major Banks
-    'SBI', 'HDFC', 'ICICI', 'AXIS', 'PNB', 'BOB', 'CANARA',
-    'UNION', 'YES', 'KOTAK', 'IDFC', 'RBL', 'FEDERAL', 'INDUSIND',
-    // UPI Services
-    'PAYTM', 'PHONEPE', 'GPAY', 'GOOGLEPAY', 'AMAZON', 'FLIPKART', 
-    'BHARATPE', 'MOBIKWIK', 'FREECHARGE', 'JIOPAY', 'AIRTEL',
-    // Credit Cards
-    'AMEX', 'VISA', 'MASTERCARD', 'RUPAY',
-    // Others
-    'WALLET', 'BANKING', 'BANK'
-  ];
-
-  /// Request SMS permissions with user-friendly messaging
-  static Future<bool> requestSMSPermission() async {
-    try {
-      final status = await Permission.sms.request();
-      return status == PermissionStatus.granted;
-    } catch (e) {
-      print('Error requesting SMS permission: $e');
-      return false;
+  /// Initialize the analyzer and request permissions
+  static Future<void> initialize() async {
+    print('📱 Initializing Real SMS Transaction Analyzer...');
+    
+    // Check and request SMS permissions
+    final smsPermission = await Permission.sms.status;
+    if (!smsPermission.isGranted) {
+      print('🔐 Requesting SMS permissions...');
+      final result = await Permission.sms.request();
+      if (!result.isGranted) {
+        throw Exception('SMS permission denied');
+      }
     }
+    
+    print('✅ SMS permissions granted');
   }
-
+  
   /// Check if SMS permissions are granted
-  static Future<bool> hasSMSPermission() async {
-    try {
-      final status = await Permission.sms.status;
-      return status == PermissionStatus.granted;
-    } catch (e) {
-      print('Error checking SMS permission: $e');
-      return false;
-    }
+  static Future<bool> hasPermissions() async {
+    return await Permission.sms.isGranted;
   }
-
-  /// Read and analyze SMS messages for transactions
-  static Future<List<Expense>> analyzeTransactions({
-    int daysBack = 30,
+  
+  /// Request SMS permissions
+  static Future<bool> requestPermissions() async {
+    final result = await Permission.sms.request();
+    return result.isGranted;
+  }
+  
+  /// Analyze SMS messages and extract transactions
+  static Future<List<ParsedTransaction>> analyzeTransactions({
+    DateTime? fromDate,
+    DateTime? toDate,
   }) async {
     try {
-      // Check permissions first
-      if (!await hasSMSPermission()) {
-        print('SMS permission not granted, requesting...');
-        if (!await requestSMSPermission()) {
-          throw Exception('SMS permission denied - cannot read messages');
-        }
-      }
-
-      // Calculate date range
-      final endDate = DateTime.now();
-      final startDate = endDate.subtract(Duration(days: daysBack));
-
-      print('🔍 Analyzing SMS messages from ${startDate.day}/${startDate.month} to ${endDate.day}/${endDate.month}');
-
-      // Query SMS messages using telephony package
-      List<SmsMessage> messages = await _telephony.getInboxSms(
+      print('🔍 Analyzing SMS transactions...');
+      
+      // Set default date range if not provided
+      fromDate ??= DateTime.now().subtract(Duration(days: 30));
+      toDate ??= DateTime.now();
+      
+      // Get SMS messages
+      final messages = await _telephony.getInboxSms(
         columns: [SmsColumn.ADDRESS, SmsColumn.BODY, SmsColumn.DATE],
         filter: SmsFilter.where(SmsColumn.DATE)
-            .greaterThan(startDate.millisecondsSinceEpoch.toString())
+            .greaterThanOrEqualTo(fromDate.millisecondsSinceEpoch.toString())
             .and(SmsColumn.DATE)
-            .lessThan(endDate.millisecondsSinceEpoch.toString()),
-        sortOrder: [OrderBy(SmsColumn.DATE, sort: Sort.DESC)],
+            .lessThanOrEqualTo(toDate.millisecondsSinceEpoch.toString()),
       );
-
-      print('📱 Found ${messages.length} SMS messages in date range');
-
-      // Filter and parse transaction messages
-      List<Expense> expenses = [];
-      int transactionCount = 0;
       
-      for (var message in messages) {
-        if (_isTransactionMessage(message.body ?? '')) {
-          transactionCount++;
-          final expense = _parseTransactionMessage(message);
-          if (expense != null) {
-            expenses.add(expense);
+      List<ParsedTransaction> transactions = [];
+      
+      for (final message in messages) {
+        if (_isBankingSMS(message.address ?? '', message.body ?? '')) {
+          final transaction = _parseTransactionFromSMS(message);
+          if (transaction != null) {
+            transactions.add(transaction);
           }
         }
       }
-
-      print('💳 Found $transactionCount potential transaction messages');
-      print('✅ Successfully parsed ${expenses.length} expense transactions');
-
+      
       // Remove duplicates and sort by date
-      expenses = _removeDuplicates(expenses);
-      expenses.sort((a, b) => b.date.compareTo(a.date));
-
-      print('🎯 Final result: ${expenses.length} unique expenses after duplicate removal');
-
-      return expenses;
+      transactions = _removeDuplicates(transactions);
+      transactions.sort((a, b) => b.date.compareTo(a.date));
+      
+      _cachedTransactions = transactions;
+      _lastAnalysis = DateTime.now();
+      
+      print('✅ Found ${transactions.length} transactions');
+      return transactions;
+      
     } catch (e) {
       print('❌ Error analyzing SMS transactions: $e');
       return [];
     }
   }
-
-  /// Enhanced transaction message detection
-  static bool _isTransactionMessage(String body) {
-    if (body.isEmpty) return false;
-    
-    final bodyLower = body.toLowerCase();
-    
-    // Check for transaction keywords
-    bool hasTransactionKeyword = _transactionKeywords.any(
-      (keyword) => bodyLower.contains(keyword.toLowerCase())
-    );
-    
-    // Check for bank identifiers
-    bool hasBankIdentifier = _bankIdentifiers.any(
-      (bank) => bodyLower.contains(bank.toLowerCase())
-    );
-    
-    // Check for amount patterns (₹, Rs., INR, numbers)
-    bool hasAmount = RegExp(r'[₹Rs\.INR]\s*[\d,]+\.?\d*|amount.*[\d,]+\.?\d*', caseSensitive: false).hasMatch(body);
-    
-    // Additional checks for common transaction phrases
-    bool hasTransactionPhrase = RegExp(r'(your.*account|card.*used|transaction.*successful|payment.*made)', caseSensitive: false).hasMatch(bodyLower);
-    
-    return (hasTransactionKeyword || hasTransactionPhrase) && (hasBankIdentifier || hasAmount);
-  }
-
-  /// Parse transaction details from SMS message with enhanced accuracy
-  static Expense? _parseTransactionMessage(SmsMessage message) {
+  
+  /// Parse transaction details from SMS message
+  static ParsedTransaction? _parseTransactionFromSMS(SmsMessage message) {
     try {
       final body = message.body ?? '';
-      final sender = message.address ?? 'Unknown';
+      final sender = message.address ?? '';
+      final date = DateTime.fromMillisecondsSinceEpoch(message.date ?? 0);
       
-      print('📝 Parsing SMS from $sender: ${body.substring(0, body.length > 50 ? 50 : body.length)}...');
-      
-      // Extract amount with better patterns
+      // Extract amount
       final amount = _extractAmount(body);
-      if (amount == null || amount <= 0) {
-        print('❌ Could not extract valid amount from message');
-        return null;
-      }
+      if (amount == null) return null;
       
-      // Extract merchant/description
-      final description = _extractDescription(body, sender);
+      // Determine transaction type
+      final type = _determineTransactionType(body);
       
-      // Determine transaction type (debit/credit)
-      final isDebit = _isDebitTransaction(body);
-      if (!isDebit) {
-        print('ℹ️ Skipping credit transaction (not an expense)');
-        return null; // Only track expenses (debits)
-      }
+      // Extract description
+      final description = _extractDescription(body);
       
-      // Auto-categorize with enhanced logic
-      final category = _categorizeTransaction(description, body);
+      // Auto-categorize
+      final category = _categorizeTransaction(body, description);
       
-      // Use SMS timestamp or current time
-      final date = message.date != null 
-          ? DateTime.fromMillisecondsSinceEpoch(message.date!)
-          : DateTime.now();
-
-      print('✅ Parsed expense: ₹$amount for $description in $category category');
-
-      return Expense(
-        id: '${message.date}_${amount.toInt()}_${description.hashCode}',
-        title: description,
+      return ParsedTransaction(
+        id: _uuid.v4(),
+        description: description,
         amount: amount,
         category: category,
         date: date,
-        type: ExpenseType.expense,
-        note: 'Auto-imported from SMS: $sender${_extractLocation(body).isNotEmpty ? ' at ${_extractLocation(body)}' : ''}',
-        smsSource: sender,
-        createdAt: DateTime.now(),
-        updatedAt: DateTime.now(),
+        rawText: body,
+        type: type,
+        sender: sender,
       );
+      
     } catch (e) {
-      print('❌ Error parsing SMS: $e');
+      print('Error parsing SMS: $e');
       return null;
     }
   }
-
-  /// Extract amount with comprehensive patterns
-  static double? _extractAmount(String text) {
-    // Enhanced patterns for different amount formats
-    final patterns = [
-      // ₹1,234.56 or ₹1234.56
-      RegExp(r'₹\s*([\d,]+\.?\d*)'),
-      // Rs.1234 or Rs 1234
-      RegExp(r'Rs\.?\s*([\d,]+\.?\d*)'),
-      // INR 1234
-      RegExp(r'INR\s+([\d,]+\.?\d*)'),
-      // amount: ₹1234 or Amount Rs.1234
-      RegExp(r'amount\s*[:\-]?\s*[₹Rs\.INR]*\s*([\d,]+\.?\d*)', caseSensitive: false),
-      // debited by ₹1234
-      RegExp(r'(?:debited|paid|charged|spent)\s+(?:by|with|for)?\s*[₹Rs\.INR]*\s*([\d,]+\.?\d*)', caseSensitive: false),
-      // transaction of ₹1234
-      RegExp(r'(?:transaction|payment|purchase)\s+of\s+[₹Rs\.INR]*\s*([\d,]+\.?\d*)', caseSensitive: false),
+  
+  /// Check if SMS is from a banking service
+  static bool _isBankingSMS(String sender, String body) {
+    final lowerSender = sender.toLowerCase();
+    final lowerBody = body.toLowerCase();
+    
+    // Bank sender patterns
+    final bankSenders = [
+      'hdfc', 'icici', 'sbi', 'axis', 'kotak', 'pnb', 'bob', 'canara',
+      'union', 'indian', 'central', 'syndicate', 'oriental', 'vijaya',
+      'dena', 'allahabad', 'corporation', 'andhra', 'yes', 'indusind',
+      'idbi', 'karur', 'south', 'federal', 'rbl', 'dcb', 'karnataka',
+      'maharashtra', 'punjab', 'rajasthan', 'tamil', 'telangana',
+      'jharkhand', 'himachal', 'haryana', 'gujarat', 'assam', 'bihar',
+      'chhattisgarh', 'goa', 'kerala', 'madhya', 'manipur', 'meghalaya',
+      'mizoram', 'nagaland', 'odisha', 'sikkim', 'tripura', 'uttarakhand',
+      'paytm', 'phonepe', 'googlepay', 'gpay', 'mobikwik', 'freecharge',
+      'amazonpay', 'bhim', 'upi'
     ];
-
-    for (var pattern in patterns) {
-      final match = pattern.firstMatch(text);
+    
+    // Check if sender matches bank patterns
+    for (final bank in bankSenders) {
+      if (lowerSender.contains(bank)) {
+        return true;
+      }
+    }
+    
+    // Transaction keywords
+    final transactionKeywords = [
+      'debited', 'credited', 'transferred', 'paid', 'received',
+      'withdrawn', 'deposited', 'balance', 'transaction', 'payment',
+      'purchase', 'refund', 'cashback', 'emi', 'loan', 'interest',
+      'charges', 'fee', 'penalty', 'bonus', 'salary', 'dividend'
+    ];
+    
+    for (final keyword in transactionKeywords) {
+      if (lowerBody.contains(keyword)) {
+        return true;
+      }
+    }
+    
+    return false;
+  }
+  
+  /// Extract amount from SMS text
+  static double? _extractAmount(String text) {
+    // Common amount patterns
+    final patterns = [
+      r'(?:rs\.?|inr\.?)\s*(\d+(?:,\d+)*(?:\.\d+)?)',
+      r'(\d+(?:,\d+)*(?:\.\d+)?)\s*(?:rs\.?|inr\.?)',
+      r'amount[:\s]*(?:rs\.?|inr\.?)?\s*(\d+(?:,\d+)*(?:\.\d+)?)',
+      r'(?:debited|credited|paid|withdrawn|deposited)[:\s]*(?:rs\.?|inr\.?)?\s*(\d+(?:,\d+)*(?:\.\d+)?)',
+    ];
+    
+    for (final pattern in patterns) {
+      final regex = RegExp(pattern, caseSensitive: false);
+      final match = regex.firstMatch(text);
       if (match != null) {
         final amountStr = match.group(1)?.replaceAll(',', '') ?? '';
-        final amount = double.tryParse(amountStr);
-        if (amount != null && amount > 0) {
-          return amount;
-        }
+        return double.tryParse(amountStr);
       }
     }
+    
     return null;
   }
-
-  /// Extract merchant/description with better accuracy
-  static String _extractDescription(String body, String sender) {
-    // Try to extract merchant name from common patterns
-    final patterns = [
-      // at MERCHANT_NAME
-      RegExp(r'\bat\s+([A-Z][A-Z0-9\s&\-\.]{2,})', caseSensitive: false),
-      // to MERCHANT_NAME
-      RegExp(r'\bto\s+([A-Z][A-Z0-9\s&\-\.]{2,})', caseSensitive: false),
-      // from MERCHANT_NAME  
-      RegExp(r'\bfrom\s+([A-Z][A-Z0-9\s&\-\.]{2,})', caseSensitive: false),
-      // on MERCHANT_NAME
-      RegExp(r'\bon\s+([A-Z][A-Z0-9\s&\-\.]{2,})', caseSensitive: false),
-      // UPI transaction patterns
-      RegExp(r'UPI/[^/]+/([A-Z0-9\s&\-\.]+)', caseSensitive: false),
-    ];
-
-    for (var pattern in patterns) {
-      final match = pattern.firstMatch(body);
-      if (match != null) {
-        String merchant = match.group(1)?.trim() ?? '';
-        // Clean up common suffixes
-        merchant = merchant.replaceAll(RegExp(r'\s+(PVT|LTD|LIMITED|INC)$', caseSensitive: false), '');
-        if (merchant.length > 3 && merchant.length < 50) {
-          return merchant;
-        }
-      }
-    }
-
-    // Fallback: use sender if it looks like a proper name, otherwise use first few words
-    if (sender.isNotEmpty && !sender.contains('-') && sender.length < 20) {
-      return sender;
-    }
+  
+  /// Determine if transaction is debit or credit
+  static String _determineTransactionType(String text) {
+    final lowerBody = text.toLowerCase();
     
-    // Last resort: extract meaningful words from message
-    final words = body.split(' ').where((word) => 
-        word.length > 3 && 
-        !RegExp(r'^\d+$').hasMatch(word) && 
-        !_transactionKeywords.contains(word.toLowerCase())
-    ).take(3);
-    
-    return words.isEmpty ? sender : words.join(' ');
-  }
-
-  /// Enhanced debit transaction detection
-  static bool _isDebitTransaction(String body) {
     final debitKeywords = [
-      'debited', 'paid', 'purchase', 'withdrawal', 'spent', 'charged',
-      'deducted', 'transaction successful', 'payment made', 'bill paid'
+      'debited', 'withdrawn', 'paid', 'purchase', 'spent',
+      'transferred', 'emi', 'bill', 'fee', 'charges', 'penalty'
     ];
     
     final creditKeywords = [
-      'credited', 'received', 'deposit', 'refund', 'cashback', 'reward'
+      'credited', 'received', 'deposited', 'refund', 'cashback',
+      'bonus', 'salary', 'interest', 'dividend', 'reward'
     ];
     
-    final bodyLower = body.toLowerCase();
-    
-    bool hasDebit = debitKeywords.any((keyword) => bodyLower.contains(keyword));
-    bool hasCredit = creditKeywords.any((keyword) => bodyLower.contains(keyword));
-    
-    // If both or neither, check for additional context
-    if (hasDebit && hasCredit) {
-      // Look for more specific indicators
-      return bodyLower.contains('debited') || bodyLower.contains('paid') || bodyLower.contains('spent');
+    for (final keyword in debitKeywords) {
+      if (lowerBody.contains(keyword)) {
+        return 'debit';
+      }
     }
     
-    return hasDebit || !hasCredit; // Default to debit if unclear
-  }
-
-  /// Enhanced auto-categorization with more patterns
-  static String _categorizeTransaction(String description, String body) {
-    final text = (description + ' ' + body).toLowerCase();
+    for (final keyword in creditKeywords) {
+      if (lowerBody.contains(keyword)) {
+        return 'credit';
+      }
+    }
     
-    // Enhanced category mapping with more keywords
-    final categories = {
-      'Food & Dining': [
-        'zomato', 'swiggy', 'dominos', 'pizza', 'mcdonald', 'kfc', 'subway',
-        'restaurant', 'food', 'dining', 'cafe', 'hotel', 'canteen', 'mess',
-        'biryani', 'chinese', 'indian', 'fast food', 'delivery'
-      ],
-      'Transportation': [
-        'uber', 'ola', 'metro', 'bus', 'taxi', 'petrol', 'fuel', 'transport',
-        'auto', 'rickshaw', 'train', 'flight', 'airline', 'cab', 'diesel',
-        'parking', 'toll', 'fastag'
-      ],
-      'Shopping': [
-        'amazon', 'flipkart', 'myntra', 'shopping', 'store', 'mall', 'market',
-        'clothes', 'electronics', 'mobile', 'laptop', 'appliance', 'grocery',
-        'supermarket', 'retail'
-      ],
-      'Bills & Utilities': [
-        'electricity', 'mobile', 'broadband', 'gas', 'water', 'bill', 'recharge',
-        'internet', 'wifi', 'telephone', 'utility', 'municipal', 'jio', 'airtel',
-        'vodafone', 'bsnl'
-      ],
-      'EMI & Loans': [
-        'emi', 'loan', 'mortgage', 'credit card', 'bajaj', 'hdfc loan', 'sbi loan',
-        'personal loan', 'home loan', 'car loan', 'education loan'
-      ],
-      'Entertainment': [
-        'movie', 'cinema', 'netflix', 'spotify', 'prime', 'hotstar', 'game',
-        'entertainment', 'ticket', 'show', 'concert', 'theatre'
-      ],
-      'Healthcare': [
-        'hospital', 'medical', 'pharmacy', 'health', 'doctor', 'clinic',
-        'medicine', 'apollo', 'max', 'fortis', 'lab', 'test', 'checkup'
-      ],
-      'Education': [
-        'school', 'college', 'course', 'books', 'education', 'fees', 'tuition',
-        'university', 'training', 'learning', 'exam', 'admission'
-      ],
+    return 'debit'; // Default to debit
+  }
+  
+  /// Extract transaction description
+  static String _extractDescription(String text) {
+    // Remove common banking text patterns
+    String description = text
+        .replaceAll(RegExp(r'(?:rs\.?|inr\.?)\s*\d+(?:,\d+)*(?:\.\d+)?', caseSensitive: false), '')
+        .replaceAll(RegExp(r'\b\d{4}\b'), '') // Remove 4-digit numbers (likely dates/times)
+        .replaceAll(RegExp(r'\b\d{10,}\b'), '') // Remove long numbers (account numbers)
+        .replaceAll(RegExp(r'[^\w\s]'), ' ') // Remove special characters
+        .replaceAll(RegExp(r'\s+'), ' ') // Remove extra spaces
+        .trim();
+    
+    // Extract meaningful parts
+    final words = description.split(' ');
+    final meaningfulWords = words.where((word) {
+      return word.length > 2 && 
+             !RegExp(r'^\d+$').hasMatch(word) &&
+             !['the', 'and', 'for', 'from', 'your', 'has', 'been'].contains(word.toLowerCase());
+    }).take(5).join(' ');
+    
+    return meaningfulWords.isNotEmpty ? meaningfulWords : 'Transaction';
+  }
+  
+  /// Auto-categorize transaction based on content
+  static String _categorizeTransaction(String text, String description) {
+    final combined = '$text $description'.toLowerCase();
+    
+    // Category patterns
+    final categoryPatterns = {
+      '🍔 Food & Dining': ['restaurant', 'food', 'cafe', 'zomato', 'swiggy', 'dominos', 'pizza', 'mcdonalds', 'kfc'],
+      '🚗 Transportation': ['fuel', 'petrol', 'diesel', 'uber', 'ola', 'taxi', 'bus', 'metro', 'parking'],
+      '🛍️ Shopping': ['amazon', 'flipkart', 'myntra', 'shopping', 'store', 'mall', 'purchase'],
+      '🏠 Home & Utilities': ['electricity', 'water', 'gas', 'internet', 'mobile', 'recharge', 'bill'],
+      '💊 Healthcare': ['hospital', 'doctor', 'medical', 'pharmacy', 'medicine', 'health'],
+      '🎬 Entertainment': ['movie', 'cinema', 'netflix', 'spotify', 'game', 'entertainment'],
+      '💰 Financial': ['emi', 'loan', 'insurance', 'investment', 'mutual', 'sip', 'bank'],
+      '✈️ Travel': ['hotel', 'flight', 'booking', 'travel', 'vacation', 'trip'],
+      '🎓 Education': ['school', 'college', 'course', 'book', 'education', 'fee'],
+      '💸 ATM': ['atm', 'cash', 'withdrawal', 'withdrawn'],
     };
-
-    for (var category in categories.keys) {
-      if (categories[category]!.any((keyword) => text.contains(keyword))) {
-        return category;
-      }
-    }
-
-    return 'Others'; // Default category
-  }
-
-  /// Extract location information
-  static String? _extractLocation(String body) {
-    final locationPatterns = [
-      RegExp(r'\bat\s+([A-Z][A-Za-z0-9\s,\-\.]{3,30})', caseSensitive: false),
-      RegExp(r'\bin\s+([A-Z][A-Za-z0-9\s,\-\.]{3,30})', caseSensitive: false),
-      RegExp(r'\bnear\s+([A-Z][A-Za-z0-9\s,\-\.]{3,30})', caseSensitive: false),
-    ];
     
-    for (var pattern in locationPatterns) {
-      final match = pattern.firstMatch(body);
-      if (match != null) {
-        final location = match.group(1)?.trim();
-        if (location != null && location.length > 3 && location.length < 30) {
-          return location;
-        }
-      }
-    }
-    return null;
-  }
-
-  /// Extract merchant with fallback logic
-  static String? _extractMerchant(String body, String description) {
-    // Try UPI transaction ID patterns first
-    final upiPatterns = [
-      RegExp(r'UPI/\d+/([A-Z0-9\-@\.]+)', caseSensitive: false),
-      RegExp(r'VPA:\s*([A-Za-z0-9\-@\.]+)', caseSensitive: false),
-    ];
-    
-    for (var pattern in upiPatterns) {
-      final match = pattern.firstMatch(body);
-      if (match != null) {
-        return match.group(1);
-      }
-    }
-    
-    // Fallback to description if it looks like a merchant name
-    if (description.length > 3 && description.length < 30 && 
-        !description.toLowerCase().contains('unknown')) {
-      return description;
-    }
-    
-    return null;
-  }
-
-  /// Determine payment method from message content
-  static String _extractPaymentMethod(String body) {
-    final bodyLower = body.toLowerCase();
-    
-    if (bodyLower.contains('upi')) return 'UPI';
-    if (bodyLower.contains('debit card') || bodyLower.contains('card ending')) return 'Debit Card';
-    if (bodyLower.contains('credit card')) return 'Credit Card';
-    if (bodyLower.contains('netbanking') || bodyLower.contains('net banking')) return 'Net Banking';
-    if (bodyLower.contains('wallet')) return 'Wallet';
-    if (bodyLower.contains('neft') || bodyLower.contains('rtgs') || bodyLower.contains('imps')) return 'Bank Transfer';
-    if (bodyLower.contains('cash')) return 'Cash';
-    
-    return 'Bank Transfer'; // Default
-  }
-
-  /// Detect if transaction might be recurring
-  static bool _detectRecurring(String body) {
-    final recurringKeywords = [
-      'emi', 'monthly', 'subscription', 'recurring', 'autopay', 'standing instruction'
-    ];
-    
-    final bodyLower = body.toLowerCase();
-    return recurringKeywords.any((keyword) => bodyLower.contains(keyword));
-  }
-
-  /// Extract relevant tags from message
-  static List<String> _extractTags(String body, String sender) {
-    List<String> tags = ['auto-imported'];
-    final bodyLower = body.toLowerCase();
-    
-    if (bodyLower.contains('upi')) tags.add('upi');
-    if (bodyLower.contains('card')) tags.add('card');
-    if (bodyLower.contains('online')) tags.add('online');
-    if (bodyLower.contains('contactless')) tags.add('contactless');
-    if (bodyLower.contains('successful')) tags.add('successful');
-    if (sender.length < 10 && !sender.contains('-')) tags.add('bank-sms');
-    
-    return tags;
-  }
-
-  /// Remove duplicate transactions with enhanced logic
-  static List<Expense> _removeDuplicates(List<Expense> expenses) {
-    Map<String, Expense> uniqueExpenses = {};
-    
-    for (var expense in expenses) {
-      // Create key based on amount, date (rounded to minute), and description
-      final dateKey = DateFormat('yyyy-MM-dd HH:mm').format(expense.date);
-      final key = '${expense.amount.toStringAsFixed(2)}_${dateKey}_${expense.description.toLowerCase().trim()}';
-      
-      if (!uniqueExpenses.containsKey(key)) {
-        uniqueExpenses[key] = expense;
-      } else {
-        // Keep the one with more detailed information
-        final existing = uniqueExpenses[key]!;
-        if (expense.description.length > existing.description.length ||
-            expense.merchant != null && existing.merchant == null) {
-          uniqueExpenses[key] = expense;
+    for (final entry in categoryPatterns.entries) {
+      for (final keyword in entry.value) {
+        if (combined.contains(keyword)) {
+          return entry.key;
         }
       }
     }
     
-    return uniqueExpenses.values.toList();
+    return '📊 Other';
   }
-
-  /// Get SMS analysis statistics
-  static Future<Map<String, dynamic>> getAnalysisStats({int daysBack = 30}) async {
-    try {
-      if (!await hasSMSPermission()) {
-        return {'error': 'SMS permission not granted'};
-      }
-
-      final endDate = DateTime.now();
-      final startDate = endDate.subtract(Duration(days: daysBack));
-
-      final messages = await _telephony.getInboxSms(
-        filter: SmsFilter.where(SmsColumn.DATE)
-            .greaterThan(startDate.millisecondsSinceEpoch.toString()),
-      );
-
-      int totalMessages = messages.length;
-      int transactionMessages = 0;
-      Map<String, int> bankCounts = {};
-
-      for (var message in messages) {
-        if (_isTransactionMessage(message.body ?? '')) {
-          transactionMessages++;
-          
-          // Count by sender
-          final sender = message.address ?? 'Unknown';
-          bankCounts[sender] = (bankCounts[sender] ?? 0) + 1;
-        }
-      }
-
-      return {
-        'totalMessages': totalMessages,
-        'transactionMessages': transactionMessages,
-        'successRate': transactionMessages / totalMessages * 100,
-        'topSenders': bankCounts.entries
-            .toList()
-            ..sort((a, b) => b.value.compareTo(a.value))
-            ..take(5),
-        'daysAnalyzed': daysBack,
-      };
-    } catch (e) {
-      return {'error': e.toString()};
-    }
+  
+  /// Remove duplicate transactions
+  static List<ParsedTransaction> _removeDuplicates(List<ParsedTransaction> transactions) {
+    final seen = <String>{};
+    return transactions.where((transaction) {
+      final key = '${transaction.amount}_${transaction.date.day}_${transaction.sender}';
+      return seen.add(key);
+    }).toList();
+  }
+  
+  /// Refresh analysis
+  static Future<void> refreshAnalysis() async {
+    _cachedTransactions.clear();
+    _lastAnalysis = null;
+    await analyzeTransactions();
+  }
+  
+  /// Get cached transactions
+  static List<ParsedTransaction> getCachedTransactions() {
+    return List.from(_cachedTransactions);
+  }
+  
+  /// Check if analysis is fresh (within last hour)
+  static bool get isAnalysisFresh {
+    if (_lastAnalysis == null) return false;
+    return DateTime.now().difference(_lastAnalysis!).inHours < 1;
   }
 }

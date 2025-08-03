@@ -5,8 +5,11 @@ import 'models/expense.dart';
 import 'models/user_settings.dart';
 import 'services/transaction_analysis_service.dart';
 import 'services/settings_service.dart';
+import 'services/biometric_auth_service.dart';
 import 'widgets/enhanced_settings_tab.dart';
 import 'widgets/budget_progress_widget.dart';
+import 'widgets/modern_cred_dashboard.dart';
+import 'widgets/biometric_lock_screen.dart';
 
 void main() async {
   WidgetsFlutterBinding.ensureInitialized();
@@ -127,7 +130,7 @@ class _SplashScreenState extends State<SplashScreen>
     Future.delayed(const Duration(seconds: 3), () {
       Navigator.pushReplacement(
         context,
-        MaterialPageRoute(builder: (context) => DashboardScreen()),
+        MaterialPageRoute(builder: (context) => const AuthenticationGate()),
       );
     });
   }
@@ -240,7 +243,7 @@ class _DashboardScreenState extends State<DashboardScreen> {
     const HomeTab(),
     const TransactionsTab(),
     const BudgetsTab(),
-    ReportsTab(),
+    const ReportsTab(),
     const EnhancedSettingsTab(),
   ];
 
