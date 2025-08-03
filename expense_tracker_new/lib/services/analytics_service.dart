@@ -125,7 +125,7 @@ class FinancialAnalytics {
             expense: expense,
             type: zScore > 0 ? AnomalyType.unusuallyHigh : AnomalyType.unusuallyLow,
             severity: zScore.abs() > 3.0 ? AnomalySeverity.high : AnomalySeverity.medium,
-            description: 'Expense of ₹${expense.amount.toStringAsFixed(0)} is ${zScore.toStringAsFixed(1)} standard deviations from your average ${category} spending',
+            description: 'Expense of ₹${expense.amount.toStringAsFixed(0)} is ${zScore.toStringAsFixed(1)} standard deviations from your average $category spending',
             confidence: _calculateAnomalyConfidence(zScore),
           ));
         }

@@ -13,6 +13,8 @@ void main() {
 }
 
 class MyExpenseTrackerApp extends StatelessWidget {
+  const MyExpenseTrackerApp({super.key});
+
   @override
   Widget build(BuildContext context) {
     return MaterialApp(
@@ -37,7 +39,7 @@ class MyExpenseTrackerApp extends StatelessWidget {
         elevation: 8,
         shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
       ),
-      appBarTheme: AppBarTheme(
+      appBarTheme: const AppBarTheme(
         elevation: 0,
         centerTitle: true,
         backgroundColor: Colors.transparent,
@@ -64,6 +66,8 @@ class MyExpenseTrackerApp extends StatelessWidget {
 
 // Splash Screen
 class SplashScreen extends StatefulWidget {
+  const SplashScreen({super.key});
+
   @override
   _SplashScreenState createState() => _SplashScreenState();
 }
@@ -78,7 +82,7 @@ class _SplashScreenState extends State<SplashScreen>
   void initState() {
     super.initState();
     _controller = AnimationController(
-      duration: Duration(seconds: 2),
+      duration: const Duration(seconds: 2),
       vsync: this,
     );
 
@@ -92,7 +96,7 @@ class _SplashScreenState extends State<SplashScreen>
 
     _controller.forward();
 
-    Future.delayed(Duration(seconds: 3), () {
+    Future.delayed(const Duration(seconds: 3), () {
       Navigator.pushReplacement(
         context,
         MaterialPageRoute(builder: (context) => DashboardScreen()),
@@ -146,13 +150,13 @@ class _SplashScreenState extends State<SplashScreen>
                             ),
                           ],
                         ),
-                        child: Icon(
+                        child: const Icon(
                           Icons.account_balance_wallet,
                           size: 60,
                           color: Colors.indigo,
                         ),
                       ),
-                      SizedBox(height: 30),
+                      const SizedBox(height: 30),
                       Text(
                         'Smart Expense Tracker',
                         style: TextStyle(
@@ -162,13 +166,13 @@ class _SplashScreenState extends State<SplashScreen>
                           shadows: [
                             Shadow(
                               color: Colors.black.withOpacity(0.3),
-                              offset: Offset(2, 2),
+                              offset: const Offset(2, 2),
                               blurRadius: 4,
                             ),
                           ],
                         ),
                       ),
-                      SizedBox(height: 10),
+                      const SizedBox(height: 10),
                       Text(
                         'Manage your money smartly & live inspired',
                         style: TextStyle(
@@ -176,8 +180,8 @@ class _SplashScreenState extends State<SplashScreen>
                           color: Colors.white.withOpacity(0.9),
                         ),
                       ),
-                      SizedBox(height: 50),
-                      CircularProgressIndicator(
+                      const SizedBox(height: 50),
+                      const CircularProgressIndicator(
                         valueColor: AlwaysStoppedAnimation<Color>(Colors.white),
                       ),
                     ],
@@ -194,13 +198,15 @@ class _SplashScreenState extends State<SplashScreen>
 
 // Main Dashboard
 class DashboardScreen extends StatefulWidget {
+  const DashboardScreen({super.key});
+
   @override
   _DashboardScreenState createState() => _DashboardScreenState();
 }
 
 class _DashboardScreenState extends State<DashboardScreen> {
   int _selectedIndex = 0;
-  PageController _pageController = PageController();
+  final PageController _pageController = PageController();
 
   final List<Widget> _screens = [
     HomeTab(),
@@ -230,12 +236,12 @@ class _DashboardScreenState extends State<DashboardScreen> {
           });
           _pageController.animateToPage(
             index,
-            duration: Duration(milliseconds: 300),
+            duration: const Duration(milliseconds: 300),
             curve: Curves.easeInOut,
           );
         },
         type: BottomNavigationBarType.fixed,
-        items: [
+        items: const [
           BottomNavigationBarItem(
             icon: Icon(Icons.home_rounded),
             label: 'Home',
@@ -260,8 +266,8 @@ class _DashboardScreenState extends State<DashboardScreen> {
       ),
       floatingActionButton: FloatingActionButton.extended(
         onPressed: () => _showAddExpenseDialog(context),
-        icon: Icon(Icons.add),
-        label: Text('Add Expense'),
+        icon: const Icon(Icons.add),
+        label: const Text('Add Expense'),
         backgroundColor: Theme.of(context).primaryColor,
         foregroundColor: Colors.white,
       ),
@@ -273,7 +279,7 @@ class _DashboardScreenState extends State<DashboardScreen> {
     showModalBottomSheet(
       context: context,
       isScrollControlled: true,
-      shape: RoundedRectangleBorder(
+      shape: const RoundedRectangleBorder(
         borderRadius: BorderRadius.vertical(top: Radius.circular(20)),
       ),
       builder: (context) => QuickAddExpenseSheet(),
@@ -283,6 +289,8 @@ class _DashboardScreenState extends State<DashboardScreen> {
 
 // Home Tab
 class HomeTab extends StatelessWidget {
+  const HomeTab({super.key});
+
   @override
   Widget build(BuildContext context) {
     return Scaffold(
@@ -293,7 +301,7 @@ class HomeTab extends StatelessWidget {
             floating: false,
             pinned: true,
             flexibleSpace: FlexibleSpaceBar(
-              title: Text('Dashboard'),
+              title: const Text('Dashboard'),
               background: Container(
                 decoration: BoxDecoration(
                   gradient: LinearGradient(
@@ -310,13 +318,13 @@ class HomeTab extends StatelessWidget {
           ),
           SliverToBoxAdapter(
             child: Padding(
-              padding: EdgeInsets.all(16),
+              padding: const EdgeInsets.all(16),
               child: Column(
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
                   // Motivational Quote Card
                   Container(
-                    padding: EdgeInsets.all(20),
+                    padding: const EdgeInsets.all(20),
                     decoration: BoxDecoration(
                       gradient: LinearGradient(
                         colors: [Colors.orange.shade300, Colors.pink.shade300],
@@ -332,7 +340,7 @@ class HomeTab extends StatelessWidget {
                         ),
                       ],
                     ),
-                    child: Row(
+                    child: const Row(
                       children: [
                         Text('✨', style: TextStyle(fontSize: 24)),
                         SizedBox(width: 12),
@@ -349,11 +357,11 @@ class HomeTab extends StatelessWidget {
                       ],
                     ),
                   ),
-                  SizedBox(height: 20),
+                  const SizedBox(height: 20),
                   
                   // Balance Overview
                   Container(
-                    padding: EdgeInsets.all(24),
+                    padding: const EdgeInsets.all(24),
                     decoration: BoxDecoration(
                       color: Theme.of(context).cardColor,
                       borderRadius: BorderRadius.circular(16),
@@ -375,7 +383,7 @@ class HomeTab extends StatelessWidget {
                             color: Colors.grey[600],
                           ),
                         ),
-                        SizedBox(height: 8),
+                        const SizedBox(height: 8),
                         Text(
                           '₹ 45,234.50',
                           style: TextStyle(
@@ -384,17 +392,17 @@ class HomeTab extends StatelessWidget {
                             color: Theme.of(context).primaryColor,
                           ),
                         ),
-                        SizedBox(height: 20),
+                        const SizedBox(height: 20),
                         Row(
                           children: [
                             Expanded(
                               child: Column(
                                 children: [
-                                  Icon(Icons.trending_up, color: Colors.green, size: 24),
-                                  SizedBox(height: 8),
+                                  const Icon(Icons.trending_up, color: Colors.green, size: 24),
+                                  const SizedBox(height: 8),
                                   Text('Income', style: TextStyle(fontSize: 14, color: Colors.grey[600])),
-                                  SizedBox(height: 4),
-                                  Text('₹ 52,000', style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold, color: Colors.green)),
+                                  const SizedBox(height: 4),
+                                  const Text('₹ 52,000', style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold, color: Colors.green)),
                                 ],
                               ),
                             ),
@@ -402,11 +410,11 @@ class HomeTab extends StatelessWidget {
                             Expanded(
                               child: Column(
                                 children: [
-                                  Icon(Icons.trending_down, color: Colors.red, size: 24),
-                                  SizedBox(height: 8),
+                                  const Icon(Icons.trending_down, color: Colors.red, size: 24),
+                                  const SizedBox(height: 8),
                                   Text('Expenses', style: TextStyle(fontSize: 14, color: Colors.grey[600])),
-                                  SizedBox(height: 4),
-                                  Text('₹ 6,765.50', style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold, color: Colors.red)),
+                                  const SizedBox(height: 4),
+                                  const Text('₹ 6,765.50', style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold, color: Colors.red)),
                                 ],
                               ),
                             ),
@@ -415,17 +423,17 @@ class HomeTab extends StatelessWidget {
                       ],
                     ),
                   ),
-                  SizedBox(height: 20),
+                  const SizedBox(height: 20),
                   
                   // Quick Actions
-                  Text(
+                  const Text(
                     'Quick Actions',
                     style: TextStyle(fontSize: 20, fontWeight: FontWeight.bold),
                   ),
-                  SizedBox(height: 16),
+                  const SizedBox(height: 16),
                   GridView.count(
                     shrinkWrap: true,
-                    physics: NeverScrollableScrollPhysics(),
+                    physics: const NeverScrollableScrollPhysics(),
                     crossAxisCount: 2,
                     crossAxisSpacing: 16,
                     mainAxisSpacing: 16,
@@ -439,7 +447,7 @@ class HomeTab extends StatelessWidget {
                       _buildQuickAction('SMS Parser', Icons.sms_outlined, Colors.orange.shade400),
                     ],
                   ),
-                  SizedBox(height: 100),
+                  const SizedBox(height: 100),
                 ],
               ),
             ),
@@ -451,7 +459,7 @@ class HomeTab extends StatelessWidget {
 
   Widget _buildQuickAction(String title, IconData icon, Color color) {
     return Container(
-      padding: EdgeInsets.all(16),
+      padding: const EdgeInsets.all(16),
       decoration: BoxDecoration(
         color: color.withOpacity(0.1),
         borderRadius: BorderRadius.circular(16),
@@ -461,7 +469,7 @@ class HomeTab extends StatelessWidget {
         mainAxisAlignment: MainAxisAlignment.center,
         children: [
           Icon(icon, color: color, size: 32),
-          SizedBox(height: 8),
+          const SizedBox(height: 8),
           Text(
             title,
             style: TextStyle(
@@ -479,6 +487,8 @@ class HomeTab extends StatelessWidget {
 
 // Quick Add Expense Sheet
 class QuickAddExpenseSheet extends StatefulWidget {
+  const QuickAddExpenseSheet({super.key});
+
   @override
   _QuickAddExpenseSheetState createState() => _QuickAddExpenseSheetState();
 }
@@ -528,13 +538,13 @@ class _QuickAddExpenseSheetState extends State<QuickAddExpenseSheet> {
                 ),
               ),
             ),
-            SizedBox(height: 20),
+            const SizedBox(height: 20),
             Row(
               children: [
                 Expanded(
                   child: Text(
                     _isIncome ? 'Add New Income' : 'Add New Expense',
-                    style: TextStyle(fontSize: 24, fontWeight: FontWeight.bold),
+                    style: const TextStyle(fontSize: 24, fontWeight: FontWeight.bold),
                   ),
                 ),
                 Switch(
@@ -545,7 +555,7 @@ class _QuickAddExpenseSheetState extends State<QuickAddExpenseSheet> {
                 Text(_isIncome ? 'Income' : 'Expense'),
               ],
             ),
-            SizedBox(height: 20),
+            const SizedBox(height: 20),
             TextFormField(
               controller: _amountController,
               keyboardType: TextInputType.number,
@@ -561,7 +571,7 @@ class _QuickAddExpenseSheetState extends State<QuickAddExpenseSheet> {
                 return null;
               },
             ),
-            SizedBox(height: 16),
+            const SizedBox(height: 16),
             TextFormField(
               controller: _titleController,
               decoration: InputDecoration(
@@ -571,7 +581,7 @@ class _QuickAddExpenseSheetState extends State<QuickAddExpenseSheet> {
               ),
               validator: (value) => value?.isEmpty == true ? 'Please enter description' : null,
             ),
-            SizedBox(height: 16),
+            const SizedBox(height: 16),
             DropdownButtonFormField<String>(
               value: _selectedCategory,
               decoration: InputDecoration(
@@ -585,7 +595,7 @@ class _QuickAddExpenseSheetState extends State<QuickAddExpenseSheet> {
               )).toList(),
               onChanged: (value) => setState(() => _selectedCategory = value!),
             ),
-            SizedBox(height: 24),
+            const SizedBox(height: 24),
             SizedBox(
               width: double.infinity,
               height: 50,
@@ -598,7 +608,7 @@ class _QuickAddExpenseSheetState extends State<QuickAddExpenseSheet> {
                 ),
                 child: Text(
                   _isIncome ? 'Save Income' : 'Save Expense',
-                  style: TextStyle(fontSize: 16, fontWeight: FontWeight.bold),
+                  style: const TextStyle(fontSize: 16, fontWeight: FontWeight.bold),
                 ),
               ),
             ),
@@ -625,18 +635,20 @@ class _QuickAddExpenseSheetState extends State<QuickAddExpenseSheet> {
 
 // Placeholder tabs
 class TransactionsTab extends StatelessWidget {
+  const TransactionsTab({super.key});
+
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      appBar: AppBar(title: Text('Transactions')),
+      appBar: AppBar(title: const Text('Transactions')),
       body: Center(
         child: Column(
           mainAxisAlignment: MainAxisAlignment.center,
           children: [
             Icon(Icons.receipt_long_rounded, size: 80, color: Colors.grey[400]),
-            SizedBox(height: 16),
+            const SizedBox(height: 16),
             Text('Advanced Transaction Management', style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold, color: Colors.grey[600])),
-            SizedBox(height: 8),
+            const SizedBox(height: 8),
             Text('Coming soon with search, filters,\nand intelligent categorization', textAlign: TextAlign.center, style: TextStyle(color: Colors.grey[500])),
           ],
         ),
@@ -646,18 +658,20 @@ class TransactionsTab extends StatelessWidget {
 }
 
 class BudgetsTab extends StatelessWidget {
+  const BudgetsTab({super.key});
+
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      appBar: AppBar(title: Text('Budgets & Goals')),
+      appBar: AppBar(title: const Text('Budgets & Goals')),
       body: Center(
         child: Column(
           mainAxisAlignment: MainAxisAlignment.center,
           children: [
             Icon(Icons.pie_chart_rounded, size: 80, color: Colors.grey[400]),
-            SizedBox(height: 16),
+            const SizedBox(height: 16),
             Text('Smart Budgeting System', style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold, color: Colors.grey[600])),
-            SizedBox(height: 8),
+            const SizedBox(height: 8),
             Text('Set budgets, track goals,\nand get motivated alerts', textAlign: TextAlign.center, style: TextStyle(color: Colors.grey[500])),
           ],
         ),
@@ -667,18 +681,20 @@ class BudgetsTab extends StatelessWidget {
 }
 
 class ReportsTab extends StatelessWidget {
+  const ReportsTab({super.key});
+
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      appBar: AppBar(title: Text('Reports & Analytics')),
+      appBar: AppBar(title: const Text('Reports & Analytics')),
       body: Center(
         child: Column(
           mainAxisAlignment: MainAxisAlignment.center,
           children: [
             Icon(Icons.analytics_rounded, size: 80, color: Colors.grey[400]),
-            SizedBox(height: 16),
+            const SizedBox(height: 16),
             Text('Beautiful Charts & Insights', style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold, color: Colors.grey[600])),
-            SizedBox(height: 8),
+            const SizedBox(height: 8),
             Text('Visual reports, spending patterns,\nand financial insights', textAlign: TextAlign.center, style: TextStyle(color: Colors.grey[500])),
           ],
         ),
@@ -688,50 +704,52 @@ class ReportsTab extends StatelessWidget {
 }
 
 class SettingsTab extends StatelessWidget {
+  const SettingsTab({super.key});
+
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      appBar: AppBar(title: Text('Settings')),
+      appBar: AppBar(title: const Text('Settings')),
       body: ListView(
-        padding: EdgeInsets.all(16),
+        padding: const EdgeInsets.all(16),
         children: [
           Card(
             child: ListTile(
               leading: CircleAvatar(
                 backgroundColor: Theme.of(context).primaryColor,
-                child: Icon(Icons.person, color: Colors.white),
+                child: const Icon(Icons.person, color: Colors.white),
               ),
-              title: Text('Your Profile', style: TextStyle(fontWeight: FontWeight.bold)),
-              subtitle: Text('Manage your account settings'),
-              trailing: Icon(Icons.chevron_right),
+              title: const Text('Your Profile', style: TextStyle(fontWeight: FontWeight.bold)),
+              subtitle: const Text('Manage your account settings'),
+              trailing: const Icon(Icons.chevron_right),
             ),
           ),
-          SizedBox(height: 16),
+          const SizedBox(height: 16),
           Text('Features', style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold, color: Colors.grey[700])),
-          SizedBox(height: 8),
+          const SizedBox(height: 8),
           Card(
             child: Column(
               children: [
                 SwitchListTile(
-                  secondary: Icon(Icons.fingerprint),
-                  title: Text('Biometric Lock'),
-                  subtitle: Text('Use fingerprint or face unlock'),
+                  secondary: const Icon(Icons.fingerprint),
+                  title: const Text('Biometric Lock'),
+                  subtitle: const Text('Use fingerprint or face unlock'),
                   value: true,
                   onChanged: (value) {},
                 ),
-                Divider(height: 1),
+                const Divider(height: 1),
                 SwitchListTile(
-                  secondary: Icon(Icons.sms),
-                  title: Text('SMS Parsing'),
-                  subtitle: Text('Auto-detect bank transactions'),
+                  secondary: const Icon(Icons.sms),
+                  title: const Text('SMS Parsing'),
+                  subtitle: const Text('Auto-detect bank transactions'),
                   value: false,
                   onChanged: (value) {},
                 ),
-                Divider(height: 1),
+                const Divider(height: 1),
                 SwitchListTile(
-                  secondary: Icon(Icons.notifications),
-                  title: Text('Smart Notifications'),
-                  subtitle: Text('Budget alerts and reminders'),
+                  secondary: const Icon(Icons.notifications),
+                  title: const Text('Smart Notifications'),
+                  subtitle: const Text('Budget alerts and reminders'),
                   value: true,
                   onChanged: (value) {},
                 ),

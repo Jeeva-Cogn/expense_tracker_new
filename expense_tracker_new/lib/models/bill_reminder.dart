@@ -84,7 +84,7 @@ class BillReminder extends HiveObject {
     while (next.isBefore(now)) {
       switch (frequency) {
         case ReminderFrequency.weekly:
-          next = next.add(Duration(days: 7));
+          next = next.add(const Duration(days: 7));
           break;
         case ReminderFrequency.monthly:
           next = DateTime(next.year, next.month + 1, next.day);
@@ -96,7 +96,7 @@ class BillReminder extends HiveObject {
           next = DateTime(next.year + 1, next.month, next.day);
           break;
         case ReminderFrequency.custom:
-          next = next.add(Duration(days: 30)); // Default to monthly
+          next = next.add(const Duration(days: 30)); // Default to monthly
           break;
       }
     }

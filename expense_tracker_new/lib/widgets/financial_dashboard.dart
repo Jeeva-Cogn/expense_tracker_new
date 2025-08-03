@@ -1,69 +1,317 @@
 import 'package:flutter/material.dart';
 import 'package:fl_chart/fl_chart.dart';
+import 'package:hive_flutter/hive_flutter.dart';
 import '../models/expense.dart';
-import '../models/budget.dart';
-import '../models/goal.dart';
-import '../services/analytics_service.dart';
+import '../services/transaction_analysis_service.dart';
+import 'dart:math' as math;
 
+/// Financial Dashboard with animated charts and progress indicators
 class FinancialDashboardWidget extends StatefulWidget {
-  final List<Expense> expenses;
-  final List<Budget> budgets;
-  final List<FinancialGoal> goals;
-
-  const FinancialDashboardWidget({
-    Key? key,
-    required this.expenses,
-    required this.budgets,
-    required this.goals,
-  }) : super(key: key);
+  const FinancialDashboardWidget({super.key});
 
   @override
-  State<FinancialDashboardWidget> createState() => _FinancialDashboardWidgetState();
+  _FinancialDashboardWidgetState createState() => _FinancialDashboardWidgetState();
 }
 
-class _FinancialDashboardWidgetState extends State<FinancialDashboardWidget> {
-  int _selectedChartIndex = 0;
+class _FinancialDashboardWidgetState extends State<FinancialDashboardWidget>
+    with TickerProviderStateMixin {
+  late AnimationController _barChartController;
+  late AnimationController _pieChartController;
+  late AnimationController _progressController;
   
+  late Animation<double> _barChartAnimation;
+  late Animation<double> _pieChartAnimation;
+  late Animation<double> _progressAnimation;
+
+  List<Expense> _expenses = [];
+  BudgetProgress? _budgetProgress;
+  bool _isLoading = true;
+
+  // Category colors for consistent theming
+  final Map<String, Color> _categoryColors = {
+    '🍔 Food & Dining': Colors.orange,
+    '🚗 Transportation': Colors.blue,
+    '🛍️ Shopping': Colors.purple,
+    '🏠 Home & Utilities': Colors.teal,
+    '💊 Healthcare': Colors.red,
+    '🎬 Entertainment': Colors.pink,
+    '💰 Financial': Colors.green,
+    '📚 Education': Colors.indigo,
+    '💼 Business': Colors.brown,
+    '💸 Others': Colors.grey,
+  };
+
+  @override
+  void initState() {
+    super.initState();
+    _initializeAnimations();
+    _loadData();
+  }
+
+  void _initializeAnimations() {
+    _barChartController = AnimationController(
+      duration: const Duration(milliseconds: 1500),
+      vsync: this,
+    );
+    
+    _pieChartController = AnimationController(
+      duration: const Duration(milliseconds: 1200),
+      vsync: this,
+    );
+    
+    _progressController = AnimationController(
+      duration: const Duration(milliseconds: 2000),
+      vsync: this,
+    );
+
+    _barChartAnimation = Tween<double>(begin: 0, end: 1).animate(
+      CurvedAnimation(parent: _barChartController, curve: Curves.elasticOut),
+    );
+    
+    _pieChartAnimation = Tween<double>(begin: 0, end: 1).animate(
+      CurvedAnimation(parent: _pieChartController, curve: Curves.easeInOut),
+    );
+    
+    _progressAnimation = Tween<double>(begin: 0, end: 1).animate(
+      CurvedAnimation(parent: _progressController, curve: Curves.easeOutCubic),
+    );
+  }
+
+  Future<void> _loadData() async {
+    try {
+      // Load expenses from Hive
+      final expenseBox = await Hive.openBox<Expense>('expenses');
+      final expenses = expenseBox.values.toList();
+      
+      // Load budget progress
+      final budgetProgress = await TransactionAnalysisService.getBudgetProgress();
+      
+      setState(() {
+        _expenses = expenses;
+        _budgetProgress = budgetProgress;
+        _isLoading = false;
+      });
+
+      // Start animations with slight delays for staggered effect
+      _barChartController.forward();
+      Future.delayed(const Duration(milliseconds: 300), () {
+        _pieChartController.forward();
+      });
+      Future.delayed(const Duration(milliseconds: 600), () {
+        _progressController.forward();
+      });
+
+      await expenseBox.close();
+    } catch (e) {
+      setState(() {
+        _isLoading = false;
+        _expenses = _generateDemoExpenses();
+        _budgetProgress = _getDemoBudgetProgress();
+      });
+      
+      // Start animations even with demo data
+      _barChartController.forward();
+      Future.delayed(const Duration(milliseconds: 300), () {
+        _pieChartController.forward();
+      });
+      Future.delayed(const Duration(milliseconds: 600), () {
+        _progressController.forward();
+      });
+    }
+  }
+
+  @override
+  void dispose() {
+    _barChartController.dispose();
+    _pieChartController.dispose();
+    _progressController.dispose();
+    super.dispose();
+  }
+
   @override
   Widget build(BuildContext context) {
-    final theme = Theme.of(context);
-    final healthReport = FinancialAnalytics.analyzeFinancialHealth(
-      widget.expenses,
-      widget.budgets,
-    );
+    if (_isLoading) {
+      return Center(
+        child: Column(
+          mainAxisAlignment: MainAxisAlignment.center,
+          children: [
+            const CircularProgressIndicator(),
+            SizedBox(height: 16),
+            Text('Loading dashboard...', style: TextStyle(color: Colors.grey[600])),
+          ],
+        ),
+      );
+    }
 
     return SingleChildScrollView(
       padding: const EdgeInsets.all(16),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          // Financial Health Overview
-          _buildHealthOverviewCard(healthReport, theme),
-          const SizedBox(height: 16),
+          // Monthly Budget Progress
+          _buildMonthlyBudgetProgress(),
+          SizedBox(height: 24),
           
-          // Chart Selection Tabs
-          _buildChartTabs(theme),
-          const SizedBox(height: 16),
+          // Monthly Expenses Bar Chart
+          _buildMonthlyExpensesBarChart(),
+          SizedBox(height: 24),
           
-          // Main Chart Area
-          _buildMainChart(healthReport, theme),
-          const SizedBox(height: 16),
+          // Today's Expenses Pie Chart
+          _buildTodayExpensesPieChart(),
+          SizedBox(height: 24),
           
-          // Quick Stats Grid
-          _buildQuickStatsGrid(healthReport, theme),
-          const SizedBox(height: 16),
-          
-          // Budget Performance
-          _buildBudgetPerformanceSection(theme),
-          const SizedBox(height: 16),
-          
-          // Goals Progress
-          _buildGoalsProgressSection(theme),
-          const SizedBox(height: 16),
-          
-          // Insights and Recommendations
-          _buildInsightsSection(healthReport, theme),
+          // Summary Cards
+          _buildSummaryCards(),
         ],
+      ),
+    );
+  }
+
+  /// Enhanced Monthly Budget Progress with animated progress bar
+  Widget _buildMonthlyBudgetProgress() {
+    if (_budgetProgress == null) return SizedBox.shrink();
+
+    return AnimatedBuilder(
+      animation: _progressAnimation,
+      builder: (context, child) {
+        final animatedPercentage = _progressAnimation.value * _budgetProgress!.percentage;
+        
+        return Container(
+          padding: const EdgeInsets.all(20),
+          decoration: BoxDecoration(
+            gradient: LinearGradient(
+              colors: [
+                _getBudgetStatusColor().withOpacity(0.1),
+                _getBudgetStatusColor().withOpacity(0.05),
+              ],
+              begin: Alignment.topLeft,
+              end: Alignment.bottomRight,
+            ),
+            borderRadius: BorderRadius.circular(16),
+            border: Border.all(color: _getBudgetStatusColor().withOpacity(0.3)),
+          ),
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              // Header with status indicator
+              Row(
+                mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                children: [
+                  const Text(
+                    '📉 Monthly Budget Progress',
+                    style: TextStyle(
+                      fontSize: 18,
+                      fontWeight: FontWeight.bold,
+                    ),
+                  ),
+                  Container(
+                    padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
+                    decoration: BoxDecoration(
+                      color: _getBudgetStatusColor(),
+                      borderRadius: BorderRadius.circular(20),
+                    ),
+                    child: Text(
+                      _getBudgetStatusText(),
+                      style: const TextStyle(
+                        color: Colors.white,
+                        fontWeight: FontWeight.bold,
+                        fontSize: 12,
+                      ),
+                    ),
+                  ),
+                ],
+              ),
+              SizedBox(height: 16),
+
+              // Budget amounts
+              Row(
+                mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                children: [
+                  Text(
+                    'Budget: ₹${_budgetProgress!.budget.toStringAsFixed(0)}',
+                    style: TextStyle(
+                      fontSize: 16,
+                      fontWeight: FontWeight.w600,
+                      color: Colors.grey[700],
+                    ),
+                  ),
+                  Text(
+                    'Remaining: ₹${_budgetProgress!.remaining.toStringAsFixed(0)}',
+                    style: TextStyle(
+                      fontSize: 16,
+                      fontWeight: FontWeight.bold,
+                      color: _budgetProgress!.remaining > 0 ? Colors.green : Colors.red,
+                    ),
+                  ),
+                ],
+              ),
+              SizedBox(height: 8),
+              
+              Text(
+                'Spent: ₹${_budgetProgress!.spent.toStringAsFixed(2)}',
+                style: const TextStyle(
+                  fontSize: 14,
+                  color: Colors.red,
+                  fontWeight: FontWeight.w500,
+                ),
+              ),
+              SizedBox(height: 16),
+
+              // Animated progress bar with blocks
+              Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Text(
+                    '${animatedPercentage.toStringAsFixed(1)}% Used',
+                    style: TextStyle(
+                      fontSize: 14,
+                      fontWeight: FontWeight.w600,
+                      color: _getBudgetStatusColor(),
+                    ),
+                  ),
+                  SizedBox(height: 8),
+                  
+                  // Block-style progress bar
+                  _buildBlockProgressBar(animatedPercentage),
+                  
+                  SizedBox(height: 8),
+                  Row(
+                    mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                    children: [
+                      Text('₹0', style: TextStyle(fontSize: 12, color: Colors.grey[600])),
+                      Text('₹${_budgetProgress!.budget.toStringAsFixed(0)}', 
+                           style: TextStyle(fontSize: 12, color: Colors.grey[600])),
+                    ],
+                  ),
+                ],
+              ),
+            ],
+          ),
+        );
+      },
+    );
+  }
+
+  /// Build block-style progress bar with animation
+  Widget _buildBlockProgressBar(double percentage) {
+    const totalBlocks = 30;
+    final filledBlocks = (percentage / 100 * totalBlocks).round();
+    
+    return SizedBox(
+      height: 12,
+      child: Row(
+        children: List.generate(totalBlocks, (index) {
+          final isFilled = index < filledBlocks;
+          return Expanded(
+            child: Container(
+              margin: const EdgeInsets.symmetric(horizontal: 1),
+              decoration: BoxDecoration(
+                color: isFilled ? _getBudgetStatusColor() : Colors.grey[300],
+                borderRadius: BorderRadius.circular(2),
+              ),
+            ),
+          );
+        }),
       ),
     );
   }
@@ -260,7 +508,7 @@ class _FinancialDashboardWidgetState extends State<FinancialDashboardWidget> {
 
     return LineChart(
       LineChartData(
-        gridData: FlGridData(show: true, drawVerticalLine: false),
+        gridData: const FlGridData(show: true, drawVerticalLine: false),
         titlesData: FlTitlesData(
           leftTitles: AxisTitles(
             sideTitles: SideTitles(
@@ -414,7 +662,7 @@ class _FinancialDashboardWidgetState extends State<FinancialDashboardWidget> {
     return BarChart(
       BarChartData(
         barGroups: monthlyData,
-        gridData: FlGridData(show: true, drawVerticalLine: false),
+        gridData: const FlGridData(show: true, drawVerticalLine: false),
         titlesData: FlTitlesData(
           leftTitles: AxisTitles(
             sideTitles: SideTitles(
@@ -473,7 +721,7 @@ class _FinancialDashboardWidgetState extends State<FinancialDashboardWidget> {
       BarChartData(
         barGroups: budgetData,
         groupsSpace: 12,
-        gridData: FlGridData(show: true, drawVerticalLine: false),
+        gridData: const FlGridData(show: true, drawVerticalLine: false),
         titlesData: FlTitlesData(
           leftTitles: AxisTitles(
             sideTitles: SideTitles(

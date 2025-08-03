@@ -222,12 +222,12 @@ class SmartNotificationService {
       body: '${expense.title} - ₹${expense.amount.toStringAsFixed(0)} in ${expense.category}',
       priority: NotificationPriority.medium,
       actions: [
-        AndroidNotificationAction(
+        const AndroidNotificationAction(
           'confirm',
           'Confirm',
           showsUserInterface: true,
         ),
-        AndroidNotificationAction(
+        const AndroidNotificationAction(
           'edit',
           'Edit',
           showsUserInterface: true,
