@@ -412,7 +412,6 @@ class _EnhancedFinancialDashboardState extends State<EnhancedFinancialDashboard>
                          monthlyData.map((e) => e.amount).reduce(math.max) * 1.2,
                     barTouchData: BarTouchData(
                       touchTooltipData: BarTouchTooltipData(
-                        tooltipBgColor: Colors.blueGrey.withOpacity(0.8),
                         getTooltipItem: (group, groupIndex, rod, rodIndex) {
                           final day = group.x + 1;
                           return BarTooltipItem(

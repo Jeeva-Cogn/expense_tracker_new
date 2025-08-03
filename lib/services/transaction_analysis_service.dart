@@ -80,7 +80,7 @@ class TransactionAnalysisService {
       }
       
       // Show error
-      _showErrorDialog(context, e.toString());
+      TransactionAnalysisService._showErrorDialog(context, e.toString());
       rethrow;
     }
   }
@@ -277,7 +277,7 @@ class TransactionAnalysisService {
           .fold(0.0, (sum, e) => sum + e.amount);
       
       final remaining = monthlyBudget - monthlyExpenses;
-      final percentage = (monthlyExpenses / monthlyBudget * 100).clamp(0, 100);
+      final percentage = (monthlyExpenses / monthlyBudget * 100).clamp(0.0, 100.0);
       
       await expenseBox.close();
       await settingsBox.close();
@@ -286,8 +286,8 @@ class TransactionAnalysisService {
         budget: monthlyBudget,
         spent: monthlyExpenses,
         remaining: remaining,
-        percentage: percentage,
-        status: _getBudgetStatus(percentage),
+        percentage: percentage.toDouble(),
+        status: _getBudgetStatus(percentage.toDouble()),
       );
     } catch (e) {
       // Return demo data if boxes aren't initialized yet
@@ -316,6 +316,46 @@ class TransactionAnalysisService {
     if (percentage < 75) return BudgetStatus.warning;
     if (percentage < 90) return BudgetStatus.danger;
     return BudgetStatus.exceeded;
+  }
+
+  /// 🤖 Launch AI Analysis and Savings Advice
+  /// Activated after "Analyze Transactions" with IST timestamping
+  static Future<void> showAIAnalysis(BuildContext context) async {
+    try {
+      // Get all expenses from storage
+      final expenseBox = await Hive.openBox<Expense>(_expenseBoxName);
+      final expenses = expenseBox.values.toList();
+      
+      // Navigate to AI Analysis screen
+      Navigator.of(context).push(
+        MaterialPageRoute(
+          builder: (context) => AIAnalysisWidget(expenses: expenses),
+        ),
+      );
+      
+      // Save analysis timestamp
+      final settingsBox = await Hive.openBox(_settingsBoxName);
+      final istTime = _getCurrentISTTime();
+      await settingsBox.put('last_ai_analysis', istTime);
+      
+    } catch (e) {
+      TransactionAnalysisService._showErrorDialog(context, 'Failed to launch AI analysis: $e');
+    }
+  }
+
+  /// Get current Indian Standard Time formatted string
+  static String _getCurrentISTTime() {
+    final now = DateTime.now();
+    // Convert to IST (UTC+5:30)
+    final istTime = now.add(const Duration(hours: 5, minutes: 30));
+    
+    return '${istTime.day.toString().padLeft(2, '0')}-${_getMonthName(istTime.month)}-${istTime.year} ${istTime.hour.toString().padLeft(2, '0')}:${istTime.minute.toString().padLeft(2, '0')} IST';
+  }
+  
+  static String _getMonthName(int month) {
+    const months = ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun',
+                   'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec'];
+    return months[month - 1];
   }
 }
 
@@ -502,45 +542,5 @@ class _AnalysisLoadingDialogState extends State<AnalysisLoadingDialog>
         ),
       ),
     );
-  }
-
-  /// 🤖 Launch AI Analysis and Savings Advice
-  /// Activated after "Analyze Transactions" with IST timestamping
-  static Future<void> showAIAnalysis(BuildContext context) async {
-    try {
-      // Get all expenses from storage
-      final expenseBox = await Hive.openBox<Expense>(_expenseBoxName);
-      final expenses = expenseBox.values.toList();
-      
-      // Navigate to AI Analysis screen
-      Navigator.of(context).push(
-        MaterialPageRoute(
-          builder: (context) => AIAnalysisWidget(expenses: expenses),
-        ),
-      );
-      
-      // Save analysis timestamp
-      final settingsBox = await Hive.openBox(_settingsBoxName);
-      final istTime = _getCurrentISTTime();
-      await settingsBox.put('last_ai_analysis', istTime);
-      
-    } catch (e) {
-      _showErrorDialog(context, 'Failed to launch AI analysis: $e');
-    }
-  }
-
-  /// Get current Indian Standard Time formatted string
-  static String _getCurrentISTTime() {
-    final now = DateTime.now();
-    // Convert to IST (UTC+5:30)
-    final istTime = now.add(const Duration(hours: 5, minutes: 30));
-    
-    return '${istTime.day.toString().padLeft(2, '0')}-${_getMonthName(istTime.month)}-${istTime.year} ${istTime.hour.toString().padLeft(2, '0')}:${istTime.minute.toString().padLeft(2, '0')} IST';
-  }
-  
-  static String _getMonthName(int month) {
-    const months = ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun',
-                   'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec'];
-    return months[month - 1];
   }
 }

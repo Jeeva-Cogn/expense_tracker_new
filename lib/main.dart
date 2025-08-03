@@ -6,6 +6,7 @@ import 'models/user_settings.dart';
 import 'services/transaction_analysis_service.dart';
 import 'services/settings_service.dart';
 import 'widgets/enhanced_settings_tab.dart';
+import 'widgets/budget_progress_widget.dart';
 
 void main() async {
   WidgetsFlutterBinding.ensureInitialized();
@@ -453,7 +454,7 @@ class HomeTab extends StatelessWidget {
                   const SizedBox(height: 20),
                   
                   // Budget Progress
-                  BudgetProgressWidget(),
+                  const BudgetProgressWidget(),
                   
                   // Analyze Transactions CTA
                   SizedBox(

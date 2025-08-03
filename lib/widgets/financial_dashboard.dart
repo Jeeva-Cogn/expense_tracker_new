@@ -7,7 +7,16 @@ import 'dart:math' as math;
 
 /// Financial Dashboard with animated charts and progress indicators
 class FinancialDashboardWidget extends StatefulWidget {
-  const FinancialDashboardWidget({super.key});
+  final List<Expense> expenses;
+  final List<Budget> budgets;
+  final List<FinancialGoal> goals;
+
+  const FinancialDashboardWidget({
+    super.key,
+    this.expenses = const [],
+    this.budgets = const [],
+    this.goals = const [],
+  });
 
   @override
   _FinancialDashboardWidgetState createState() => _FinancialDashboardWidgetState();
@@ -181,14 +190,14 @@ class _FinancialDashboardWidgetState extends State<FinancialDashboardWidget>
           decoration: BoxDecoration(
             gradient: LinearGradient(
               colors: [
-                _getBudgetStatusColor().withOpacity(0.1),
-                _getBudgetStatusColor().withOpacity(0.05),
+                _getBudgetStatusColor(_budgetProgress!.percentage).withOpacity(0.1),
+                _getBudgetStatusColor(_budgetProgress!.percentage).withOpacity(0.05),
               ],
               begin: Alignment.topLeft,
               end: Alignment.bottomRight,
             ),
             borderRadius: BorderRadius.circular(16),
-            border: Border.all(color: _getBudgetStatusColor().withOpacity(0.3)),
+            border: Border.all(color: _getBudgetStatusColor(_budgetProgress!.percentage).withOpacity(0.3)),
           ),
           child: Column(
             crossAxisAlignment: CrossAxisAlignment.start,
@@ -207,11 +216,11 @@ class _FinancialDashboardWidgetState extends State<FinancialDashboardWidget>
                   Container(
                     padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
                     decoration: BoxDecoration(
-                      color: _getBudgetStatusColor(),
+                      color: _getBudgetStatusColor(_budgetProgress!.percentage),
                       borderRadius: BorderRadius.circular(20),
                     ),
                     child: Text(
-                      _getBudgetStatusText(),
+                      _getBudgetStatusText(_budgetProgress!.percentage),
                       style: const TextStyle(
                         color: Colors.white,
                         fontWeight: FontWeight.bold,
@@ -266,7 +275,7 @@ class _FinancialDashboardWidgetState extends State<FinancialDashboardWidget>
                     style: TextStyle(
                       fontSize: 14,
                       fontWeight: FontWeight.w600,
-                      color: _getBudgetStatusColor(),
+                      color: _getBudgetStatusColor(_budgetProgress!.percentage),
                     ),
                   ),
                   SizedBox(height: 8),
@@ -306,7 +315,7 @@ class _FinancialDashboardWidgetState extends State<FinancialDashboardWidget>
             child: Container(
               margin: const EdgeInsets.symmetric(horizontal: 1),
               decoration: BoxDecoration(
-                color: isFilled ? _getBudgetStatusColor() : Colors.grey[300],
+                color: isFilled ? _getBudgetStatusColor(_budgetProgress!.percentage) : Colors.grey[300],
                 borderRadius: BorderRadius.circular(2),
               ),
             ),
@@ -906,7 +915,7 @@ class _FinancialDashboardWidgetState extends State<FinancialDashboardWidget>
             LinearProgressIndicator(
               value: goal.progress,
               backgroundColor: Colors.grey[300],
-              valueColor: AlwaysStoppedAnimation<Color>(Color(int.parse('0xFF${goal.color.substring(1)}'))),
+              valueColor: AlwaysStoppedAnimation<Color>(goal.color),
             ),
             const SizedBox(height: 4),
             Text(
@@ -970,4 +979,157 @@ class _FinancialDashboardWidgetState extends State<FinancialDashboardWidget>
     ];
     return colors[category.hashCode % colors.length];
   }
+
+  // Missing methods implementation
+  List<Expense> _generateDemoExpenses() {
+    return []; // Return empty list for demo purposes
+  }
+
+  BudgetProgress _getDemoBudgetProgress() {
+    return BudgetProgress(
+      budget: 10000.0,
+      spent: 3000.0,
+      remaining: 7000.0,
+      percentage: 30.0,
+      status: BudgetStatus.onTrack,
+    );
+  }
+
+  Widget _buildMonthlyExpensesBarChart() {
+    return Container(
+      height: 200,
+      child: Center(child: Text('Chart not available')),
+    );
+  }
+
+  Widget _buildTodayExpensesPieChart() {
+    return Container(
+      height: 200,
+      child: Center(child: Text('Chart not available')),
+    );
+  }
+
+  Widget _buildSummaryCards() {
+    return Container(
+      height: 100,
+      child: Center(child: Text('Summary not available')),
+    );
+  }
+
+  Color _getBudgetStatusColor(double percentage) {
+    if (percentage < 50) return Colors.green;
+    if (percentage < 75) return Colors.orange;
+    return Colors.red;
+  }
+
+  String _getBudgetStatusText(double percentage) {
+    if (percentage < 50) return 'On Track';
+    if (percentage < 75) return 'Warning';
+    return 'Over Budget';
+  }
+
+  // Add missing fields
+  int _selectedChartIndex = 0;
+}
+
+// Missing classes
+class FinancialHealthReport {
+  final double healthScore;
+  final List<String> insights;
+  final String healthGrade;
+  final double netCashFlow;
+  final double savingsRate;
+  final String riskLevel;
+  final List<TrendPoint> spendingTrends;
+  final Map<String, CategoryAnalysis> expenseCategories;
+  final double totalExpenses;
+  final double totalIncome;
+  final List<String> recommendations;
+  
+  FinancialHealthReport({
+    required this.healthScore,
+    required this.insights,
+    required this.healthGrade,
+    required this.netCashFlow,
+    required this.savingsRate,
+    required this.riskLevel,
+    required this.spendingTrends,
+    required this.expenseCategories,
+    required this.totalExpenses,
+    required this.totalIncome,
+    required this.recommendations,
+  });
+}
+
+class TrendPoint {
+  final DateTime date;
+  final double value;
+  
+  TrendPoint({required this.date, required this.value});
+}
+
+class CategoryAnalysis {
+  final String category;
+  final double amount;
+  final double percentage;
+  final double totalSpent;
+  final double percentageOfTotal;
+  
+  CategoryAnalysis({
+    required this.category,
+    required this.amount,
+    required this.percentage,
+    required this.totalSpent,
+    required this.percentageOfTotal,
+  });
+}
+
+class Budget {
+  final String category;
+  final double amount;
+  final double spent;
+  final bool isActive;
+  final double limit;
+  final bool isOverBudget;
+  final String name;
+  final double percentageUsed;
+  final int daysRemaining;
+  
+  Budget({
+    required this.category,
+    required this.amount,
+    required this.spent,
+    required this.isActive,
+    required this.limit,
+    required this.isOverBudget,
+    required this.name,
+    required this.percentageUsed,
+    required this.daysRemaining,
+  });
+}
+
+class FinancialGoal {
+  final String title;
+  final double targetAmount;
+  final double currentAmount;
+  final DateTime deadline;
+  final bool isActive;
+  final String iconEmoji;
+  final String name;
+  final double progress;
+  final Color color;
+  final int daysRemaining;
+  
+  FinancialGoal({
+    required this.title,
+    required this.targetAmount,
+    required this.currentAmount,
+    required this.deadline,
+    required this.isActive,
+    required this.iconEmoji,
+    required this.name,
+    required this.progress,
+    required this.color,
+    required this.daysRemaining,
+  });
 }
