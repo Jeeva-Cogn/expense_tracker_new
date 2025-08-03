@@ -1,13 +1,21 @@
 import 'dart:async';
 import 'dart:math';
 import 'package:flutter/material.dart';
-import 'package:sms_advanced/sms_advanced.dart';
 import 'package:permission_handler/permission_handler.dart';
 import 'package:intl/intl.dart';
 import 'package:timezone/timezone.dart' as tz;
 import '../models/expense.dart';
 import '../services/notification_service.dart';
 import 'package:uuid/uuid.dart';
+
+// Mock SMS Message class for now
+class SmsMessage {
+  final String? body;
+  final String? sender;
+  final DateTime? date;
+  
+  SmsMessage({this.body, this.sender, this.date});
+}
 
 class SMSTransactionAnalyzer {
   static const String _uuid = 'uuid';
@@ -130,6 +138,12 @@ class SMSTransactionAnalyzer {
 
   /// Read recent SMS messages
   static Future<List<SmsMessage>> _readRecentSMS({int days = 30}) async {
+    // Mock implementation for now - return empty list
+    // TODO: Implement actual SMS reading once we have a working SMS package
+    print('📱 SMS reading temporarily disabled - using mock data');
+    return [];
+    
+    /* Original implementation would be:
     final smsQuery = SmsQuery();
     final messages = await smsQuery.querySms(
       kinds: [SmsQueryKind.inbox],
@@ -142,6 +156,7 @@ class SMSTransactionAnalyzer {
     return messages
         .where((msg) => msg.date?.isAfter(cutoffDate) ?? false)
         .toList();
+    */
   }
 
   /// Check if SMS message contains transaction information
