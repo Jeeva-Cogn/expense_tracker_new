@@ -3,7 +3,7 @@ import 'package:hive_flutter/hive_flutter.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:firebase_auth/firebase_auth.dart';
 
-import '../models/budget_model.dart';
+import '../models/budget.dart';
 
 class BudgetProvider extends ChangeNotifier {
   final FirebaseFirestore _firestore = FirebaseFirestore.instance;
@@ -11,234 +11,155 @@ class BudgetProvider extends ChangeNotifier {
   
   Box<Budget>? _budgetBox;
   List<Budget> _budgets = [];
-  BudgetDashboardData? _dashboardData;
   bool _isLoading = false;
   String? _errorMessage;
 
   List<Budget> get budgets => _budgets;
-  BudgetDashboardData? get dashboardData => _dashboardData;
   bool get isLoading => _isLoading;
   String? get errorMessage => _errorMessage;
 
-  double get totalBudget => _budgets.fold(0.0, (sum, budget) => sum + budget.amount);
-  double get totalSpent => _budgets.fold(0.0, (sum, budget) => sum + budget.spent);
+  double get totalBudget => _budgets.fold(0.0, (total, budget) => total + budget.amount);
+  double get totalSpent => _budgets.fold(0.0, (total, budget) => total + budget.spent);
   double get remainingBudget => totalBudget - totalSpent;
   double get budgetUtilization => totalBudget > 0 ? totalSpent / totalBudget : 0.0;
 
-  Future<void> initialize() async {
+  // Load budgets method
+  Future<void> loadBudgets() async {
+    _isLoading = true;
+    _errorMessage = null;
+    notifyListeners();
+
     try {
-      _setLoading(true);
-      _budgetBox = await Hive.openBox<Budget>('budgets');
-      await _loadBudgets();
-      await _loadDashboardData();
+      await _initializeBox();
+      await _loadFromLocal();
+      
+      // Try to sync with cloud if user is authenticated
+      if (_auth.currentUser != null) {
+        await _syncWithCloud();
+      }
     } catch (e) {
-      _setError('Failed to initialize budgets: $e');
+      _errorMessage = 'Failed to load budgets: $e';
+      debugPrint('Error loading budgets: $e');
     } finally {
-      _setLoading(false);
+      _isLoading = false;
+      notifyListeners();
     }
   }
 
-  Future<void> _loadBudgets() async {
+  Future<void> _initializeBox() async {
+    if (_budgetBox == null || !_budgetBox!.isOpen) {
+      _budgetBox = await Hive.openBox<Budget>('budgets');
+    }
+  }
+
+  Future<void> _loadFromLocal() async {
     if (_budgetBox != null) {
       _budgets = _budgetBox!.values.toList();
-      _budgets.sort((a, b) => a.category.compareTo(b.category));
-      notifyListeners();
+      _budgets.sort((a, b) => b.startDate.compareTo(a.startDate));
     }
   }
 
-  Future<void> _loadDashboardData() async {
-    try {
-      // TODO: Implement dashboard data loading when service is available
-      debugPrint('Dashboard data loading feature coming soon...');
-      notifyListeners();
-    } catch (e) {
-      _setError('Failed to load dashboard data: $e');
-    }
+  Future<void> _syncWithCloud() async {
+    // Placeholder for cloud sync
   }
 
+  Future<void> initialize() async {
+    await loadBudgets();
+  }
+
+  // Add a new budget
   Future<void> addBudget(Budget budget) async {
     try {
-      _setLoading(true);
-      _clearError();
-
-      // Add to local storage
-      await _budgetBox?.add(budget);
+      await _initializeBox();
+      await _budgetBox!.put(budget.id, budget);
+      _budgets.add(budget);
+      _budgets.sort((a, b) => b.startDate.compareTo(a.startDate));
       
-      // Add to cloud storage if user is authenticated
-      final user = _auth.currentUser;
-      if (user != null) {
+      if (_auth.currentUser != null) {
         await _firestore
-            .collection('users')
-            .doc(user.uid)
             .collection('budgets')
-            .add(budget.toJson());
+            .doc(budget.id)
+            .set(budget.toJson());
       }
-
-      await _loadBudgets();
-      await _loadDashboardData();
+      
+      notifyListeners();
     } catch (e) {
-      _setError('Failed to add budget: $e');
-    } finally {
-      _setLoading(false);
+      debugPrint('Error adding budget: $e');
+      rethrow;
     }
   }
 
-  Future<void> updateBudget(String id, Budget updatedBudget) async {
+  // Update a budget
+  Future<void> updateBudget(Budget budget) async {
     try {
-      _setLoading(true);
-      _clearError();
-
-      // Find and update in local storage
-      final index = _budgets.indexWhere((budget) => budget.id == id);
+      await _initializeBox();
+      await _budgetBox!.put(budget.id, budget);
+      
+      final index = _budgets.indexWhere((b) => b.id == budget.id);
       if (index != -1) {
-        await _budgetBox?.putAt(index, updatedBudget);
-        
-        // Update in cloud storage if user is authenticated
-        final user = _auth.currentUser;
-        if (user != null) {
-          final snapshot = await _firestore
-              .collection('users')
-              .doc(user.uid)
-              .collection('budgets')
-              .where('id', isEqualTo: id)
-              .get();
-              
-          for (final doc in snapshot.docs) {
-            await doc.reference.update(updatedBudget.toJson());
-          }
-        }
+        _budgets[index] = budget;
       }
-
-      await _loadBudgets();
-      await _loadDashboardData();
+      
+      if (_auth.currentUser != null) {
+        await _firestore
+            .collection('budgets')
+            .doc(budget.id)
+            .update(budget.toJson());
+      }
+      
+      notifyListeners();
     } catch (e) {
-      _setError('Failed to update budget: $e');
-    } finally {
-      _setLoading(false);
+      debugPrint('Error updating budget: $e');
+      rethrow;
     }
   }
 
-  Future<void> deleteBudget(String id) async {
+  // Delete a budget
+  Future<void> deleteBudget(String budgetId) async {
     try {
-      _setLoading(true);
-      _clearError();
-
-      // Remove from local storage
-      final index = _budgets.indexWhere((budget) => budget.id == id);
-      if (index != -1) {
-        await _budgetBox?.deleteAt(index);
-        
-        // Remove from cloud storage if user is authenticated
-        final user = _auth.currentUser;
-        if (user != null) {
-          final snapshot = await _firestore
-              .collection('users')
-              .doc(user.uid)
-              .collection('budgets')
-              .where('id', isEqualTo: id)
-              .get();
-              
-          for (final doc in snapshot.docs) {
-            await doc.reference.delete();
-          }
-        }
+      await _initializeBox();
+      await _budgetBox!.delete(budgetId);
+      _budgets.removeWhere((budget) => budget.id == budgetId);
+      
+      if (_auth.currentUser != null) {
+        await _firestore.collection('budgets').doc(budgetId).delete();
       }
-
-      await _loadBudgets();
-      await _loadDashboardData();
+      
+      notifyListeners();
     } catch (e) {
-      _setError('Failed to delete budget: $e');
-    } finally {
-      _setLoading(false);
+      debugPrint('Error deleting budget: $e');
+      rethrow;
     }
   }
 
-  Future<void> updateBudgetSpending(String category, double amount) async {
+  // Get budget by id
+  Budget? getBudgetById(String id) {
     try {
-      final budgetIndex = _budgets.indexWhere((budget) => budget.category == category);
-      if (budgetIndex != -1) {
-        final budget = _budgets[budgetIndex];
-        final updatedBudget = budget.copyWith(spent: budget.spent + amount);
-        await updateBudget(budget.id, updatedBudget);
-      }
-    } catch (e) {
-      _setError('Failed to update budget spending: $e');
-    }
-  }
-
-  Budget? getBudgetByCategory(String category) {
-    try {
-      return _budgets.firstWhere((budget) => budget.category == category);
+      return _budgets.firstWhere((budget) => budget.id == id);
     } catch (e) {
       return null;
     }
   }
 
-  List<Budget> getOverBudgetCategories() {
-    return _budgets.where((budget) => budget.spent > budget.amount).toList();
+  // Get budgets by category
+  List<Budget> getBudgetsByCategory(String category) {
+    return _budgets.where((budget) => budget.category == category).toList();
   }
 
-  List<Budget> getNearBudgetLimitCategories({double threshold = 0.8}) {
-    return _budgets
-        .where((budget) => 
-            budget.spent / budget.amount >= threshold && 
-            budget.spent <= budget.amount)
-        .toList();
+  // Get active budgets
+  List<Budget> getActiveBudgets() {
+    return _budgets.where((budget) => budget.isActive).toList();
   }
 
-  Future<void> syncWithCloud() async {
+  // Clear all data
+  Future<void> clearAllData() async {
     try {
-      _setLoading(true);
-      _clearError();
-
-      final user = _auth.currentUser;
-      if (user == null) return;
-
-      // Get cloud budgets
-      final cloudSnapshot = await _firestore
-          .collection('users')
-          .doc(user.uid)
-          .collection('budgets')
-          .get();
-
-      // Merge with local budgets
-      final cloudBudgets = cloudSnapshot.docs
-          .map((doc) => Budget.fromJson(doc.data()))
-          .toList();
-
-      // Simple merge strategy: cloud takes precedence
       await _budgetBox?.clear();
-      for (final budget in cloudBudgets) {
-        await _budgetBox?.add(budget);
-      }
-
-      await _loadBudgets();
-      await _loadDashboardData();
+      _budgets.clear();
+      notifyListeners();
     } catch (e) {
-      _setError('Failed to sync with cloud: $e');
-    } finally {
-      _setLoading(false);
+      debugPrint('Error clearing budget data: $e');
+      rethrow;
     }
   }
-
-  Future<void> refreshDashboard() async {
-    await _loadDashboardData();
-  }
-
-  void _setLoading(bool loading) {
-    _isLoading = loading;
-    notifyListeners();
-  }
-
-  void _setError(String error) {
-    _errorMessage = error;
-    notifyListeners();
-  }
-
-  void _clearError() {
-    _errorMessage = null;
-    notifyListeners();
-  }
-
-  void clearError() => _clearError();
 }

@@ -3,9 +3,9 @@ import 'package:provider/provider.dart';
 import 'package:firebase_core/firebase_core.dart';
 import 'package:hive_flutter/hive_flutter.dart';
 
-import 'models/expense_model.dart';
-import 'models/budget_model.dart';
-import 'models/sms_transaction.dart';
+import 'models/expense.dart';
+import 'models/budget.dart';
+import 'models/goal.dart';
 import 'providers/auth_provider.dart';
 import 'providers/expense_provider.dart';
 import 'providers/budget_provider.dart';
@@ -26,7 +26,7 @@ void main() async {
   // Register Hive adapters
   Hive.registerAdapter(ExpenseAdapter());
   Hive.registerAdapter(BudgetAdapter());
-  Hive.registerAdapter(SMSTransactionAdapter());
+  Hive.registerAdapter(FinancialGoalAdapter());
   
   runApp(const ExpenseTrackerApp());
 }

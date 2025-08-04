@@ -49,18 +49,18 @@ dependencies:
   path_provider: ^2.1.3
   timezone: ^0.9.4
   
-  # SMS and permissions
-  sms_advanced: ^1.0.1
+  # SMS and permissions - using permission_handler only for now
+  # telephony: ^0.2.0
   permission_handler: ^11.3.1
   
-  # ML and NLP (using available packages)
-  google_ml_kit: ^0.16.3
+  # ML and NLP (using available packages) - temporarily removed for build
+  # google_ml_kit: ^0.16.3
   
   # SMS analysis and regex
   string_similarity: ^2.0.0
   
-  # Work Manager for scheduling
-  workmanager: ^0.5.2
+  # Work Manager for scheduling - temporarily removed for build
+  # workmanager: ^0.5.2
   
   # Google Sign-In
   google_sign_in: ^6.2.1
@@ -101,7 +101,7 @@ dev_dependencies:
   
   # Code generation
   hive_generator: ^2.0.1
-  build_runner: ^2.4.12
+  build_runner: ^2.4.11
   
   # App icon generation
   flutter_launcher_icons: ^0.13.1

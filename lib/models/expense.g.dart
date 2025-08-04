@@ -1,6 +1,6 @@
 // GENERATED CODE - DO NOT MODIFY BY HAND
 
-part of 'expense_model.dart';
+part of 'expense.dart';
 
 // **************************************************************************
 // TypeAdapterGenerator
@@ -18,33 +18,39 @@ class ExpenseAdapter extends TypeAdapter<Expense> {
     };
     return Expense(
       id: fields[0] as String,
-      amount: fields[1] as double,
-      description: fields[2] as String,
-      category: fields[3] as String,
-      date: fields[4] as DateTime,
-      source: fields[5] as String?,
-      metadata: (fields[6] as Map?)?.cast<String, dynamic>(),
+      title: fields[1] as String,
+      amount: fields[2] as double,
+      date: fields[3] as DateTime,
+      category: fields[4] as String,
+      description: fields[5] as String?,
+      isExpense: fields[6] as bool,
+      receipt: fields[7] as String?,
+      tags: (fields[8] as Map?)?.cast<String, dynamic>(),
     );
   }
 
   @override
   void write(BinaryWriter writer, Expense obj) {
     writer
-      ..writeByte(7)
+      ..writeByte(9)
       ..writeByte(0)
       ..write(obj.id)
       ..writeByte(1)
-      ..write(obj.amount)
+      ..write(obj.title)
       ..writeByte(2)
-      ..write(obj.description)
+      ..write(obj.amount)
       ..writeByte(3)
-      ..write(obj.category)
-      ..writeByte(4)
       ..write(obj.date)
+      ..writeByte(4)
+      ..write(obj.category)
       ..writeByte(5)
-      ..write(obj.source)
+      ..write(obj.description)
       ..writeByte(6)
-      ..write(obj.metadata);
+      ..write(obj.isExpense)
+      ..writeByte(7)
+      ..write(obj.receipt)
+      ..writeByte(8)
+      ..write(obj.tags);
   }
 
   @override

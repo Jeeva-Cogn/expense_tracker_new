@@ -15,9 +15,11 @@ class AppColors {
 
   // ===== PRIMARY COLORS =====
   /// Main brand color for buttons and headings - trustworthy blue
+  static const Color primary = Color(0xFF3B82F6);
   static const Color primaryAccent = Color(0xFF3B82F6);
   
   /// Deeper blue for hover/active states - maintains consistency
+  static const Color secondary = Color(0xFF2563EB);
   static const Color secondaryAccent = Color(0xFF2563EB);
 
   // ===== SEMANTIC COLORS =====
@@ -39,6 +41,10 @@ class AppColors {
   
   /// Labels and secondary text - softer gray for hierarchy
   static const Color textSecondary = Color(0xFF6B7280);
+
+  // ===== BORDER COLORS =====
+  /// Border color for dividers and subtle borders
+  static const Color border = Color(0xFFE5E7EB);
 
   // ===== CHART COLORS =====
   /// Expense category colors - balanced and distinguishable

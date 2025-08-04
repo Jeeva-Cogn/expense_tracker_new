@@ -1,6 +1,6 @@
 // GENERATED CODE - DO NOT MODIFY BY HAND
 
-part of 'budget_model.dart';
+part of 'budget.dart';
 
 // **************************************************************************
 // TypeAdapterGenerator
@@ -23,14 +23,15 @@ class BudgetAdapter extends TypeAdapter<Budget> {
       spent: fields[3] as double,
       startDate: fields[4] as DateTime,
       endDate: fields[5] as DateTime,
-      isActive: fields[6] as bool,
+      description: fields[6] as String?,
+      isActive: fields[7] as bool,
     );
   }
 
   @override
   void write(BinaryWriter writer, Budget obj) {
     writer
-      ..writeByte(7)
+      ..writeByte(8)
       ..writeByte(0)
       ..write(obj.id)
       ..writeByte(1)
@@ -44,6 +45,8 @@ class BudgetAdapter extends TypeAdapter<Budget> {
       ..writeByte(5)
       ..write(obj.endDate)
       ..writeByte(6)
+      ..write(obj.description)
+      ..writeByte(7)
       ..write(obj.isActive);
   }
 

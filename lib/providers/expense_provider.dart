@@ -3,7 +3,7 @@ import 'package:hive_flutter/hive_flutter.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:firebase_auth/firebase_auth.dart';
 
-import '../models/expense_model.dart';
+import '../models/expense.dart';
 
 class ExpenseProvider extends ChangeNotifier {
   final FirebaseFirestore _firestore = FirebaseFirestore.instance;
@@ -18,14 +18,55 @@ class ExpenseProvider extends ChangeNotifier {
   bool get isLoading => _isLoading;
   String? get errorMessage => _errorMessage;
 
-  double get totalExpenses => _expenses.fold(0.0, (sum, expense) => sum + expense.amount);
+  double get totalExpenses => _expenses.fold(0.0, (total, expense) => total + expense.amount);
   
   double get thisMonthExpenses {
     final now = DateTime.now();
     final thisMonth = DateTime(now.year, now.month);
     return _expenses
         .where((expense) => expense.date.isAfter(thisMonth))
-        .fold(0.0, (sum, expense) => sum + expense.amount);
+        .fold(0.0, (total, expense) => total + expense.amount);
+  }
+
+  // Initialize and load expenses
+  Future<void> loadExpenses() async {
+    _isLoading = true;
+    _errorMessage = null;
+    notifyListeners();
+
+    try {
+      await _initializeBox();
+      await _loadFromLocal();
+      
+      // Try to sync with cloud if user is authenticated
+      if (_auth.currentUser != null) {
+        await _syncWithCloud();
+      }
+    } catch (e) {
+      _errorMessage = 'Failed to load expenses: $e';
+      debugPrint('Error loading expenses: $e');
+    } finally {
+      _isLoading = false;
+      notifyListeners();
+    }
+  }
+
+  Future<void> _initializeBox() async {
+    if (_expenseBox == null || !_expenseBox!.isOpen) {
+      _expenseBox = await Hive.openBox<Expense>('expenses');
+    }
+  }
+
+  Future<void> _loadFromLocal() async {
+    if (_expenseBox != null) {
+      _expenses = _expenseBox!.values.toList();
+      _expenses.sort((a, b) => b.date.compareTo(a.date)); // Sort by date, newest first
+    }
+  }
+
+  Future<void> _syncWithCloud() async {
+    // Implementation for cloud sync would go here
+    // For now, just a placeholder
   }
 
   Map<String, double> get expensesByCategory {
