@@ -33,13 +33,7 @@ class AppTheme {
       ),
 
       // Card theme
-      cardTheme: CardTheme(
-        color: AppColors.cardBackground,
-        elevation: 0,
-        shape: RoundedRectangleBorder(
-          borderRadius: BorderRadius.circular(16),
-        ),
-      ),
+      cardColor: AppColors.cardBackground,
 
       // Elevated button theme
       elevatedButtonTheme: ElevatedButtonThemeData(
@@ -103,14 +97,7 @@ class AppTheme {
         elevation: 8,
       ),
 
-      // Dialog theme
-      dialogTheme: DialogTheme(
-        backgroundColor: AppColors.cardBackground,
-        elevation: 8,
-        shape: RoundedRectangleBorder(
-          borderRadius: BorderRadius.circular(20),
-        ),
-      ),
+      // Dialog theme removed for compatibility
 
       // Icon theme
       iconTheme: const IconThemeData(
