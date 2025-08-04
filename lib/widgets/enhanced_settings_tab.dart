@@ -88,7 +88,7 @@ class _EnhancedSettingsTabState extends State<EnhancedSettingsTab>
                   width: 60,
                   height: 60,
                   decoration: BoxDecoration(
-                    color: Colors.white.withValues(alpha: 0.2),
+                    color: Colors.white.withOpacity(0.2),
                     shape: BoxShape.circle,
                   ),
                   child: const Icon(
@@ -140,7 +140,7 @@ class _EnhancedSettingsTabState extends State<EnhancedSettingsTab>
                 Container(
                   padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
                   decoration: BoxDecoration(
-                    color: const Color(0xFF10B981).withValues(alpha: 0.2),
+                    color: const Color(0xFF10B981).withOpacity(0.2),
                     borderRadius: BorderRadius.circular(12),
                   ),
                   child: const Row(

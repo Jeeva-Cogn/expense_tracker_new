@@ -10,8 +10,14 @@ import 'providers/auth_provider.dart';
 import 'providers/expense_provider.dart';
 import 'providers/budget_provider.dart';
 import 'providers/gamification_provider.dart';
+import 'services/settings_service.dart';
 import 'screens/auth_screen.dart';
 import 'screens/home_screen.dart';
+import 'screens/add_expense_screen.dart';
+import 'screens/expenses_screen.dart';
+import 'screens/budgets_screen.dart';
+import 'screens/analytics_screen.dart';
+import 'screens/settings_screen.dart';
 import 'theme/app_theme.dart';
 
 void main() async {
@@ -42,6 +48,7 @@ class ExpenseTrackerApp extends StatelessWidget {
         ChangeNotifierProvider(create: (_) => ExpenseProvider()),
         ChangeNotifierProvider(create: (_) => BudgetProvider()),
         ChangeNotifierProvider(create: (_) => GamificationProvider()),
+        ChangeNotifierProvider(create: (_) => SettingsService()),
       ],
       child: MaterialApp(
         title: 'Expense Tracker',
@@ -52,6 +59,11 @@ class ExpenseTrackerApp extends StatelessWidget {
         routes: {
           '/auth': (context) => const AuthScreen(),
           '/home': (context) => const HomeScreen(),
+          '/add-expense': (context) => const AddExpenseScreen(),
+          '/expenses': (context) => const ExpensesScreen(),
+          '/budgets': (context) => const BudgetsScreen(),
+          '/analytics': (context) => const AnalyticsScreen(),
+          '/settings': (context) => const SettingsScreen(),
         },
       ),
     );
