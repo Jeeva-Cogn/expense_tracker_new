@@ -2,6 +2,7 @@ import 'dart:async';
 import 'package:flutter/material.dart';
 import 'package:hive_flutter/hive_flutter.dart';
 import '../models/expense.dart';
+import '../models/parsed_transaction.dart';
 import '../services/sms_transaction_analyzer.dart';
 import '../services/demo_transaction_generator.dart';
 import '../services/notification_service.dart';
@@ -36,13 +37,8 @@ class TransactionAnalysisService {
       final processedTransactions = <ParsedTransaction>[];
       final uncertainTransactions = <ParsedTransaction>[];
       
-      for (final transaction in parsedTransactions) {
-        if (transaction.needsManualReview) {
-          uncertainTransactions.add(transaction);
-        } else {
-          processedTransactions.add(transaction);
-        }
-      }
+      // For now, treat all transactions as processed since we simplified the model
+      processedTransactions.addAll(parsedTransactions);
       
       // Close loading dialog
       Navigator.of(context, rootNavigator: true).pop();
@@ -94,38 +90,13 @@ class TransactionAnalysisService {
     );
   }
 
-  /// Review uncertain transactions with user
+  /// Review uncertain transactions with user (TEMPORARILY DISABLED)
   static Future<List<ParsedTransaction>> _reviewUncertainTransactions(
     BuildContext context,
     List<ParsedTransaction> uncertainTransactions,
   ) async {
-    final reviewedTransactions = <ParsedTransaction>[];
-    
-    for (final transaction in uncertainTransactions) {
-      final selectedCategory = await SMSTransactionAnalyzer.showCategorySelectionDialog(
-        context,
-        transaction,
-      );
-      
-      if (selectedCategory != null) {
-        // Create updated transaction with correct category
-        final updatedTransaction = ParsedTransaction(
-          id: transaction.id,
-          amount: transaction.amount,
-          merchant: transaction.merchant,
-          date: transaction.date,
-          type: transaction.type,
-          category: selectedCategory,
-          rawSMS: transaction.rawSMS,
-          sender: transaction.sender,
-          confidence: 1.0, // User confirmed
-          needsManualReview: false,
-        );
-        reviewedTransactions.add(updatedTransaction);
-      }
-    }
-    
-    return reviewedTransactions;
+    // Temporarily disabled due to simplified ParsedTransaction model
+    return <ParsedTransaction>[];
   }
 
   /// Save expenses to local database

@@ -5,6 +5,7 @@ import 'package:permission_handler/permission_handler.dart';
 import 'package:intl/intl.dart';
 import 'package:timezone/timezone.dart' as tz;
 import '../models/expense.dart';
+import '../models/parsed_transaction.dart';
 import '../services/notification_service.dart';
 import 'package:uuid/uuid.dart';
 
@@ -197,20 +198,15 @@ class SMSTransactionAnalyzer {
     // Auto-categorize transaction
     final category = _categorizeSmart(merchant, body);
     
-    // Calculate confidence score
-    final confidence = _calculateConfidence(body, merchant);
-
     return ParsedTransaction(
       id: const Uuid().v4(),
+      description: merchant,
       amount: amount,
-      merchant: merchant,
       date: tz.TZDateTime.from(date, _istTimezone),
-      type: transactionType,
+      type: transactionType.toString().split('.').last,
       category: category,
-      rawSMS: body,
+      rawText: body,
       sender: sender,
-      confidence: confidence,
-      needsManualReview: confidence < 0.8,
     );
   }
 
@@ -238,8 +234,6 @@ class SMSTransactionAnalyzer {
 
   /// Extract merchant/description from SMS
   static String _extractMerchant(String body, String sender) {
-    final lowerBody = body.toLowerCase();
-    
     // Look for merchant names after common patterns
     final merchantPatterns = [
       RegExp(r'at\s+([a-zA-Z0-9\s\-_]+)', caseSensitive: false),
@@ -318,42 +312,18 @@ class SMSTransactionAnalyzer {
     return bestCategory;
   }
 
-  /// Calculate confidence score for the parsed transaction
-  static double _calculateConfidence(String body, String merchant) {
-    double confidence = 0.5; // Base confidence
-    
-    // Increase confidence based on various factors
-    if (body.contains(RegExp(r'[₹rs\.]\s*[\d,]+\.?\d*', caseSensitive: false))) {
-      confidence += 0.2; // Has clear amount pattern
-    }
-    
-    if (_bankSenders.any((bank) => body.toUpperCase().contains(bank))) {
-      confidence += 0.2; // From known bank
-    }
-    
-    if (merchant.length > 3) {
-      confidence += 0.1; // Has meaningful merchant name
-    }
-    
-    if (body.contains('transaction') || body.contains('payment')) {
-      confidence += 0.1; // Clear transaction indicators
-    }
-    
-    return confidence.clamp(0.0, 1.0);
-  }
-
   /// Convert parsed transactions to Expense objects
   static List<Expense> convertToExpenses(List<ParsedTransaction> parsedTransactions) {
     return parsedTransactions.map((parsed) {
       return Expense(
         id: parsed.id,
-        title: parsed.merchant,
+        title: parsed.description,
         amount: parsed.amount,
         category: parsed.category,
         date: parsed.date,
-        type: parsed.type,
+        type: parsed.type == 'debit' ? ExpenseType.expense : ExpenseType.income,
         smsSource: parsed.sender,
-        note: 'Auto-detected from SMS\nConfidence: ${(parsed.confidence * 100).toInt()}%',
+        note: 'Auto-detected from SMS',
         createdAt: DateTime.now(),
         updatedAt: DateTime.now(),
       );
@@ -404,38 +374,6 @@ $randomMessage
 
 💡 Tip: Review uncertain transactions for better accuracy.
     ''';
-  }
-}
-
-/// Represents a parsed transaction from SMS
-class ParsedTransaction {
-  final String id;
-  final double amount;
-  final String merchant;
-  final DateTime date;
-  final ExpenseType type;
-  final String category;
-  final String rawSMS;
-  final String sender;
-  final double confidence;
-  final bool needsManualReview;
-
-  ParsedTransaction({
-    required this.id,
-    required this.amount,
-    required this.merchant,
-    required this.date,
-    required this.type,
-    required this.category,
-    required this.rawSMS,
-    required this.sender,
-    required this.confidence,
-    required this.needsManualReview,
-  });
-
-  @override
-  String toString() {
-    return 'ParsedTransaction(merchant: $merchant, amount: ₹$amount, category: $category)';
   }
 }
 
@@ -507,7 +445,7 @@ class _CategorySelectionDialogState extends State<CategorySelectionDialog> {
                 children: [
                   Text('Amount: ₹${widget.transaction.amount}',
                       style: const TextStyle(fontWeight: FontWeight.bold)),
-                  Text('Merchant: ${widget.transaction.merchant}'),
+                  Text('Merchant: ${widget.transaction.description}'),
                   Text('Date: ${DateFormat('dd MMM yyyy').format(widget.transaction.date)}'),
                 ],
               ),

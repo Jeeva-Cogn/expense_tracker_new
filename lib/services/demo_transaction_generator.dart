@@ -1,6 +1,7 @@
 import 'dart:async';
 import 'dart:math';
 import '../models/expense.dart';
+import '../models/parsed_transaction.dart';
 import '../services/sms_transaction_analyzer.dart';
 import 'package:uuid/uuid.dart';
 
@@ -109,20 +110,15 @@ class DemoTransactionGenerator {
     // Categorize
     final category = _categorizeTransaction(merchant, body);
     
-    // Calculate confidence (demo purposes - mostly high confidence)
-    final confidence = _random.nextDouble() * 0.3 + 0.7; // 0.7 to 1.0
-
     return ParsedTransaction(
       id: _uuid.v4(),
+      description: merchant,
       amount: amount,
-      merchant: merchant,
       date: date,
-      type: transactionType,
+      type: transactionType.toString().split('.').last,
       category: category,
-      rawSMS: body,
+      rawText: body,
       sender: sender,
-      confidence: confidence,
-      needsManualReview: confidence < 0.8,
     );
   }
 
@@ -141,8 +137,6 @@ class DemoTransactionGenerator {
 
   /// Extract merchant from SMS text
   static String _extractMerchantFromText(String body, String sender) {
-    final lowerBody = body.toLowerCase();
-    
     // Look for common merchant patterns
     final merchantPatterns = [
       RegExp(r'to\s+([a-zA-Z0-9\s\-_]+?)\s+(?:via|using|on|was)', caseSensitive: false),
@@ -228,15 +222,13 @@ class DemoTransactionGenerator {
       
       randomTransactions.add(ParsedTransaction(
         id: _uuid.v4(),
+        description: merchant,
         amount: amount,
-        merchant: merchant,
         date: DateTime.now().subtract(Duration(hours: _random.nextInt(48))),
-        type: ExpenseType.expense,
+        type: 'debit',
         category: categories[_random.nextInt(categories.length)],
-        rawSMS: 'You paid Rs.$amount to $merchant via UPI. Transaction successful.',
+        rawText: 'You paid Rs.$amount to $merchant via UPI. Transaction successful.',
         sender: 'DEMO',
-        confidence: 0.85,
-        needsManualReview: false,
       ));
     }
     
