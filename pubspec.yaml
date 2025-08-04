@@ -127,7 +127,7 @@ flutter:
   # App icon configuration
   assets:
     - assets/icons/
-    - assets/images/
+    # - assets/images/  # Removed: directory is empty and causes build errors
 
   # An image asset can refer to one or more resolution-specific "variants", see
   # https://flutter.dev/assets-and-images/#resolution-aware

@@ -29,11 +29,11 @@ class AppColors {
   
   /// Budget warnings - informative without being alarming
   /// Warm amber that guides rather than scares
-  static const Color warning = Color(0xF59E0B);
+  static const Color warning = Color(0xFFF59E0B);
   
   /// Overspend notifications - gentle guidance
   /// Soft red that encourages rather than punishes
-  static const Color danger = Color(0xEF4444);
+  static const Color danger = Color(0xFFEF4444);
 
   // ===== TEXT COLORS =====
   /// Main text color - readable dark gray (not harsh black)
@@ -153,12 +153,10 @@ class AppColors {
   static ColorScheme get colorScheme => ColorScheme.fromSeed(
     seedColor: primaryAccent,
     brightness: Brightness.light,
-    background: background,
     surface: cardBackground,
     primary: primaryAccent,
     secondary: secondaryAccent,
     error: danger,
-    onBackground: textPrimary,
     onSurface: textPrimary,
     onPrimary: Colors.white,
     onSecondary: Colors.white,
