@@ -52,7 +52,7 @@ android {
 
     signingConfigs {
         release {
-            storeFile file("../../walletflow-release-key.jks")
+            storeFile file("$rootDir/../walletflow-release-key.jks")
             storePassword "walletflow123"
             keyAlias "walletflow-release"
             keyPassword "walletflow123"
